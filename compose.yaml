@@ -1,0 +1,14 @@
+services:
+  pekeymngr:
+    image: pekeymngr
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - database:/app/Data
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+volumes:
+  database:
