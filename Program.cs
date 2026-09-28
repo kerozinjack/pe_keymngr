@@ -40,6 +40,13 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 WebApplication? app = builder.Build();
 
+// Apply database migrations
+using (IServiceScope? scope = app.Services.CreateScope())
+{
+    ApplicationDbContext? db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
