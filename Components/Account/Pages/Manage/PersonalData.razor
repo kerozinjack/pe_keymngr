@@ -6,24 +6,43 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Personal Data</PageTitle>
+<PageTitle>Személyes adatok</PageTitle>
 
-<StatusMessage />
-<h3>Personal Data</h3>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="mb-4">
+                <h1 class="fw-bold mb-2">Személyes adatok</h1>
+                <p class="text-secondary mb-0">
+                    A fiókodhoz kapcsolódó személyes adatok kezelése.
+                </p>
+            </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
-        <form action="Account/Manage/DownloadPersonalData" method="post">
-            <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">Delete</a>
-        </p>
+            <StatusMessage />
+
+            <p>
+                A fiókod olyan személyes adatokat tartalmaz, amelyeket megadtál nekünk.
+                Ezen az oldalon letöltheted vagy törölheted ezeket az adatokat.
+            </p>
+
+            <div class="alert alert-warning" role="alert">
+                <strong>Figyelem:</strong> Az adatok törlése véglegesen törli a fiókodat,
+                és ez a művelet nem vonható vissza.
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <form action="Account/Manage/DownloadPersonalData" method="post">
+                    <AntiforgeryToken />
+                    <button class="btn btn-primary" type="submit">
+                        Letöltés
+                    </button>
+                </form>
+
+                <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">
+                    Törlés
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 

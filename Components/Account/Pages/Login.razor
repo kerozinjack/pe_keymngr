@@ -13,61 +13,131 @@
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+<div class="container py-5">
+    <div class="row justify-content-center">
+
+        <div class="col-12 col-md-10 col-lg-9 col-xl-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+
+                <div class="row g-0">
+
+                    <!-- Bejelentkezés -->
+                    <div class="col-lg-12">
+                        <div class="card-body p-4 p-md-5">
+
+                            <div class="mb-4">
+                                <h1 class="fw-bold mb-2">Üdv újra!</h1>
+                                <p class="text-secondary mb-0">
+                                    Jelentkezz be a fiókodba a folytatáshoz.
+                                </p>
+                            </div>
+
+                            <StatusMessage Message="@errorMessage" />
+
+                            <EditForm EditContext="editContext"
+                                      method="post"
+                                      OnSubmit="LoginUser"
+                                      FormName="login">
+
+                                <DataAnnotationsValidator />
+
+                                <ValidationSummary class="text-danger" role="alert" />
+
+                                <!-- E-mail -->
+                                <div class="mb-3">
+                                    <label for="Input.Email" class="form-label fw-semibold">
+                                        E-mail
+                                    </label>
+
+                                    <InputText @bind-Value="Input.Email"
+                                               id="Input.Email"
+                                               class="form-control form-control-lg"
+                                               autocomplete="username webauthn"
+                                               aria-required="true"
+                                               placeholder="nev@example.com" />
+
+                                    <ValidationMessage For="() => Input.Email"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Jelszó -->
+                                <div class="mb-3">
+                                    <label for="Input.Password" class="form-label fw-semibold">
+                                        Jelszó
+                                    </label>
+
+                                    <InputText type="password"
+                                               @bind-Value="Input.Password"
+                                               id="Input.Password"
+                                               class="form-control form-control-lg"
+                                               autocomplete="current-password"
+                                               aria-required="true"
+                                               placeholder="Jelszó" />
+
+                                    <ValidationMessage For="() => Input.Password"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Emlékezz rám -->
+                                <div class="form-check mb-4">
+                                    <InputCheckbox @bind-Value="Input.RememberMe"
+                                                   id="rememberMe"
+                                                   class="form-check-input" />
+
+                                    <label class="form-check-label" for="rememberMe">
+                                        Emlékezz rám
+                                    </label>
+                                </div>
+
+                                <!-- Bejelentkezés -->
+                                <button type="submit"
+                                        class="btn btn-primary btn-lg w-100">
+                                    Bejelentkezés
+                                </button>
+
+                                <!-- Passkey -->
+                                <div class="d-flex align-items-center my-4">
+                                    <hr class="flex-grow-1">
+                                    <span class="text-secondary small px-3">VAGY</span>
+                                    <hr class="flex-grow-1">
+                                </div>
+
+                                <PasskeySubmit Operation="PasskeyOperation.Request"
+                                               Name="Input.Passkey"
+                                               EmailName="Input.Email"
+                                               class="btn btn-outline-secondary btn-lg w-100">
+                                    Bejelentkezés passkey használatával
+                                </PasskeySubmit>
+
+                                <!-- Linkek -->
+                                <div class="text-center mt-4">
+
+                                    <div class="mb-2">
+                                        <a href="Account/ForgotPassword"
+                                           class="text-decoration-none">
+                                            Elfelejtetted a jelszavad?
+                                        </a>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
+                                           class="text-decoration-none">
+                                            Új felhasználói fiók létrehozása
+                                        </a>
+                                    </div>
+
+                                </div>
+
+                            </EditForm>
+
+                        </div>
+                    </div>
+
                 </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <hr />
-                <div class="d-flex flex-column">
-                    <span class="text-secondary mx-auto mt-2">OR</span>
-                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="btn btn-link mx-auto">Log in with a passkey</PasskeySubmit>
-                </div>
-                <hr />
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </EditForm>
-        </section>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
+
+            </div>
+        </div>
+
     </div>
 </div>
 
