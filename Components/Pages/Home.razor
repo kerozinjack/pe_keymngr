@@ -1,7 +1,153 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@rendermode InteractiveServer
+@inject NavigationManager Nav
 
-<PageTitle>Home</PageTitle>
+<AuthorizeView>
+    <Authorized>
+        <!-- 1. BEJELENTKEZETT NÉZET (MŰSZERFAL) -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <div>
+                <h2 class="h4 mb-1 text-primary">Műszerfal</h2>
+                <p class="text-muted small mb-0">Központi áttekintő és gyorsnavigáció</p>
+            </div>
+        </div>
 
-<h1>Hello, world!</h1>
+        <!-- KPI KÁRTYÁK -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-primary">
+                    <div class="text-muted small">Kiadott kulcsok</div>
+                    <div class="fs-3 fw-bold text-dark">12 <span class="fs-6 text-muted fw-normal">/ 48</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-success">
+                    <div class="text-muted small">Mai foglalások</div>
+                    <div class="fs-3 fw-bold text-dark">24</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-danger">
+                    <div class="text-muted small">Késésben lévő kulcsok</div>
+                    <div class="fs-3 fw-bold text-danger">2</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-warning">
+                    <div class="text-muted small">Karbantartás alatt</div>
+                    <div class="fs-3 fw-bold text-dark">1 terem</div>
+                </div>
+            </div>
+        </div>
 
-Welcome to your new app.
+        <!-- GYORSNAVIGÁCIÓ -->
+        <h5 class="mb-3 text-secondary">Gyors műveletek</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-primary"><i class="bi bi-key-fill me-2"></i>Porta / Operátor</h6>
+                        <p class="card-text small text-muted">Kulcsok gyors kiadása, visszavétele és hibák rögzítése.</p>
+                        <button class="btn btn-primary btn-sm w-100" @onclick='() => Nav.NavigateTo("/portas/kulcsok")'>
+                            Kulcskezelés
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-primary"><i class="bi bi-calendar-event me-2"></i>Oktató / Igénylő</h6>
+                        <p class="card-text small text-muted">Új idősáv-foglalás leadása 45 perces egységekben.</p>
+                        <button class="btn btn-outline-primary btn-sm w-100" @onclick='() => Nav.NavigateTo("/oktato/foglalas")'>
+                            Új foglalás
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-primary"><i class="bi bi-gear-fill me-2"></i>Adminisztrátor</h6>
+                        <p class="card-text small text-muted">Termek, mesterkulcsok és karbantartások kezelése.</p>
+                        <button class="btn btn-outline-secondary btn-sm w-100" @onclick='() => Nav.NavigateTo("/admin/termek")'>
+                            Terem törzsadatok
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="card-title text-primary"><i class="bi bi-graph-up me-2"></i>Üzemeltetés</h6>
+                        <p class="card-text small text-muted">Kihasználtsági riportok és audit logok elemzése.</p>
+                        <button class="btn btn-outline-dark btn-sm w-100" @onclick='() => Nav.NavigateTo("/igazgato/audit")'>
+                            Audit Logok
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        <!-- 2. BEJELENTKEZÉS ELŐTTI NYILVÁNOS LANDING PAGE -->
+        <div class="py-5 text-center bg-white rounded-3 shadow-sm my-4 border">
+            <div class="py-4 max-w-2xl mx-auto px-3">
+                <div class="mb-3 text-primary">
+                    <i class="bi bi-building-lock display-1"></i>
+                </div>
+                <h1 class="display-5 fw-bold text-dark">Informatikai Kar</h1>
+                <p class="fs-5 text-muted mb-4">Terem- és Kulcskezelő Rendszer</p>
+                <p class="lead text-secondary mb-4">
+                    A rendszer megtekintéséhez és a funkciók használatához kérjük, jelentkezzen be az egyetemi azonosítójával.
+                </p>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <button class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2" @onclick='() => Nav.NavigateTo("Account/Login")'>
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span>Bejelentkezés</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- INFORMÁCIÓS KÁRTYÁK -->
+        <div class="row g-4 py-3">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-3">
+                    <div class="card-body">
+                        <div class="fs-1 text-primary mb-3"><i class="bi bi-shield-check"></i></div>
+                        <h5 class="card-title">Hiteles azonosítás</h5>
+                        <p class="card-text text-muted small">
+                            A kulcsok kiadása és átvétele PIN kód, kártya vagy digitális aláírás alapján, pontos időbélyeggel rögzítve történik.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-3">
+                    <div class="card-body">
+                        <div class="fs-1 text-primary mb-3"><i class="bi bi-clock-history"></i></div>
+                        <h5 class="card-title">45 perces idősávok</h5>
+                        <p class="card-text text-muted small">
+                            Automatikus ütközésvizsgálattal ellátott online foglalási rendszer oktatók és igénylők számára.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-3">
+                    <div class="card-body">
+                        <div class="fs-1 text-primary mb-3"><i class="bi bi-journal-text"></i></div>
+                        <h5 class="card-title">Teljeskörű Audit</h5>
+                        <p class="card-text text-muted small">
+                            Visszakövethető eseménynapló és valós idejű teremkihasználtsági statisztikák az üzemeltetés számára.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
