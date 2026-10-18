@@ -17,6 +17,8 @@
 
 <PageTitle>Register</PageTitle>
 
+<PageTitle>Regisztráció</PageTitle>
+
 <div class="container py-5">
     <div class="row justify-content-center">
 
@@ -25,14 +27,14 @@
 
                 <div class="row g-0">
 
-                    <!-- Register -->
+                    <!-- Regisztráció -->
                     <div class="col-lg-12">
                         <div class="card-body p-4 p-md-5">
 
                             <div class="mb-4">
-                                <h1 class="fw-bold mb-2">Create an account</h1>
+                                <h1 class="fw-bold mb-2">Fiók létrehozása</h1>
                                 <p class="text-secondary mb-0">
-                                    Register to get started with PeKeyMngr.
+                                    Regisztrálj, hogy elkezdhesd használni a PeKeyMngr-t.
                                 </p>
                             </div>
 
@@ -47,10 +49,10 @@
 
                                 <ValidationSummary class="text-danger" role="alert" />
 
-                                <!-- Email -->
+                                <!-- E-mail -->
                                 <div class="mb-3">
                                     <label for="Input.Email" class="form-label fw-semibold">
-                                        Email
+                                        E-mail
                                     </label>
 
                                     <InputText @bind-Value="Input.Email"
@@ -58,16 +60,16 @@
                                                class="form-control form-control-lg"
                                                autocomplete="username"
                                                aria-required="true"
-                                               placeholder="name@example.com" />
+                                               placeholder="nev@example.com" />
 
                                     <ValidationMessage For="() => Input.Email"
                                                        class="text-danger small mt-1" />
                                 </div>
 
-                                <!-- Password -->
+                                <!-- Jelszó -->
                                 <div class="mb-3">
                                     <label for="Input.Password" class="form-label fw-semibold">
-                                        Password
+                                        Jelszó
                                     </label>
 
                                     <InputText type="password"
@@ -76,16 +78,16 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Create a password" />
+                                               placeholder="Hozz létre egy jelszót" />
 
                                     <ValidationMessage For="() => Input.Password"
                                                        class="text-danger small mt-1" />
                                 </div>
 
-                                <!-- Confirm password -->
+                                <!-- Jelszó megerősítése -->
                                 <div class="mb-4">
                                     <label for="Input.ConfirmPassword" class="form-label fw-semibold">
-                                        Confirm password
+                                        Jelszó megerősítése
                                     </label>
 
                                     <InputText type="password"
@@ -94,27 +96,27 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Confirm your password" />
+                                               placeholder="Erősítsd meg a jelszavad" />
 
                                     <ValidationMessage For="() => Input.ConfirmPassword"
                                                        class="text-danger small mt-1" />
                                 </div>
 
-                                <!-- Register -->
+                                <!-- Regisztráció -->
                                 <button type="submit"
                                         class="btn btn-primary btn-lg w-100">
-                                    Create account
+                                    Fiók létrehozása
                                 </button>
 
-                                <!-- Login link -->
+                                <!-- Bejelentkezési link -->
                                 <div class="text-center mt-4">
                                     <span class="text-secondary">
-                                        Already have an account?
+                                        Már van fiókod?
                                     </span>
 
                                     <a href="Account/Login"
                                        class="text-decoration-none ms-1">
-                                        Log in
+                                        Bejelentkezés
                                     </a>
                                 </div>
 
@@ -129,6 +131,8 @@
 
     </div>
 </div>
+
+
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
