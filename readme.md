@@ -1,22 +1,21 @@
-# Pannon Egyetem - Projekt Labor 2026/27/1 
+# University of Pannonia - Project Laboratory 2026/27/1 
 
-A projekt a Projekt Labor tárgy keretein belül készült. Az alkalmazás egy kulcsnyílvántartó rendszert valósít meg, amely a teremhasználat és kulcskezelés teljes életciklusát digitálisan lefedi — a foglalástól a kulcs kiadásán és visszavételén át a riportálásig és auditálásig.  
+This project was developed within the framework of the Project Laboratory course. The application implements a key management system that digitally covers the entire lifecycle of room usage and key management — from booking, issuing, and returning keys, through to reporting and auditing.  
 
-
-## Build és futtatás:
-1. Repository klónozása
-- 1. HTTPS használatával
+## Build and Run:
+1. Clone the repository
+- Using HTTPS
 ```sh
 git clone https://github.com/kerozinjack/pe_keymngr.git
 ```
-- 2. SSH használatával
+- Using SSH
 ```sh
 git clone git@github.com:kerozinjack/pe_keymngr.git
 ```
 
-2. Futtatás
+2. Run
 ```sh
 cd pe_keymngr
 docker compose up --build
 ```
-Az alkalmazás a 8080 (HTTP) és 8081 (HTTPS) portokon üzemel
+The application runs on ports 8080 (HTTP) and 8081 (HTTPS).
