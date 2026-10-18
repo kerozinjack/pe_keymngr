@@ -16,17 +16,17 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Regisztráció</PageTitle>
 
 <StatusMessage Message="@message" />
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
+<h1>Regisztráció</h1>
+<h2>A(z) @ProviderDisplayName fiókod összekapcsolása</h2>
 <hr />
 
-<div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+<div class="alert alert-info">
+    Sikeresen hitelesítetted magad a(z) <strong>@ProviderDisplayName</strong> szolgáltatóval.
+    A bejelentkezés befejezéséhez add meg az alábbi mezőben az ezen az oldalon használni kívánt e-mail-címedet,
+    majd kattints a Regisztráció gombra.
 </div>
 
 <div class="row">
@@ -35,11 +35,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="Input.Email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Add meg az e-mail-címedet." />
+                <label for="Input.Email" class="form-label">E-mail-cím</label>
                 <ValidationMessage For="() => Input.Email" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Regisztráció</button>
         </EditForm>
     </div>
 </div>
@@ -73,14 +73,14 @@
 
         if (RemoteError is not null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"Hiba a külső szolgáltatótól: {RemoteError}", HttpContext);
             return;
         }
 
         var info = await SignInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Hiba történt a külső bejelentkezési adatok betöltésekor.", HttpContext);
             return;
         }
 
@@ -94,8 +94,8 @@
                 return;
             }
 
-            // We should only reach this page via the login callback, so redirect back to
-            // the login page if we get here some other way.
+            // Ezt az oldalt normál esetben csak a bejelentkezési visszahívásból lehet elérni,
+            // ezért más esetben vissza kell irányítani a felhasználót a bejelentkezési oldalra.
             RedirectManager.RedirectTo("Account/Login");
         }
     }
@@ -104,11 +104,11 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Hiba történt a külső bejelentkezési adatok betöltésekor.", HttpContext);
             return;
         }
 
-        // Sign in the user with this external login provider if the user already has a login.
+        // Bejelentkeztetjük a felhasználót a külső szolgáltatóval, ha már rendelkezik ilyen bejelentkezéssel.
         var result = await SignInManager.ExternalLoginSignInAsync(
             externalLoginInfo.LoginProvider,
             externalLoginInfo.ProviderKey,
@@ -118,7 +118,7 @@
         if (result.Succeeded)
         {
             Logger.LogInformation(
-                "{Name} logged in with {LoginProvider} provider.",
+                "{Name} bejelentkezett a(z) {LoginProvider} szolgáltatóval.",
                 externalLoginInfo.Principal.Identity?.Name,
                 externalLoginInfo.LoginProvider);
             RedirectManager.RedirectTo(ReturnUrl);
@@ -130,7 +130,7 @@
             return;
         }
 
-        // If the user does not have an account, then ask the user to create an account.
+        // Ha a felhasználónak még nincs fiókja, felajánljuk neki a fiók létrehozását.
         if (externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
         {
             Input.Email = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
@@ -141,7 +141,7 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information during confirmation.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", "Hiba történt a külső bejelentkezési adatok betöltésekor a megerősítés során.", HttpContext);
             return;
         }
 
@@ -157,7 +157,7 @@
             result = await UserManager.AddLoginAsync(user, externalLoginInfo);
             if (result.Succeeded)
             {
-                Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
+                Logger.LogInformation("A felhasználó a(z) {Name} szolgáltatóval hozott létre fiókot.", externalLoginInfo.LoginProvider);
 
                 var userId = await UserManager.GetUserIdAsync(user);
                 var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -168,7 +168,7 @@
                     new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
                 await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-                // If account confirmation is required, we need to show the link if we don't have a real email sender
+                // Ha a fiók megerősítése kötelező, valódi e-mail-küldő hiányában meg kell jeleníteni a hivatkozást.
                 if (UserManager.Options.SignIn.RequireConfirmedAccount)
                 {
                     RedirectManager.RedirectTo("Account/RegisterConfirmation", new() { ["email"] = Input.Email });
@@ -182,7 +182,7 @@
         }
         else
         {
-            message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+            message = $"Hiba: {string.Join(",", result.Errors.Select(error => error.Description))}";
         }
     }
 
@@ -194,8 +194,8 @@
         }
         catch
         {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor");
+            throw new InvalidOperationException($"Nem sikerült létrehozni a(z) '{nameof(ApplicationUser)}' példányát. " +
+                $"Ellenőrizd, hogy a(z) '{nameof(ApplicationUser)}' nem absztrakt osztály-e, és rendelkezik-e paraméter nélküli konstruktorral.");
         }
     }
 
@@ -203,7 +203,7 @@
     {
         if (!UserManager.SupportsUserEmail)
         {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
+            throw new NotSupportedException("Az alapértelmezett felület használatához olyan felhasználói adattár szükséges, amely támogatja az e-mail-címeket.");
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }

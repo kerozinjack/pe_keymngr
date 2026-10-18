@@ -37,7 +37,7 @@
                     <div class="mb-4">
                         <label for="email" class="form-label fw-semibold">Current email</label>
                         <div class="input-group">
-                            <input type="text" value="@email" id="email" class="form-control" placeholder="Enter your email" disabled />
+                            <input type="text" value="@email" id="email" class="form-control" placeholder="Adja meg az email címét" disabled />
                             <span class="input-group-text text-success fw-bold">✓</span>
                         </div>
                         <div class="form-text text-success">Az email címe hitelesítve van.</div>
@@ -47,7 +47,7 @@
                 {
                     <div class="mb-4">
                         <label for="email" class="form-label fw-semibold">Current email</label>
-                        <input type="text" value="@email" id="email" class="form-control mb-2" placeholder="Enter your email" disabled />
+                        <input type="text" value="@email" id="email" class="form-control mb-2" placeholder="Adja meg az email címét" disabled />
                         <button type="submit" class="btn btn-link px-0" form="send-verification-form">
                             Hitelesítő email küldése
                         </button>
@@ -106,7 +106,7 @@
     {
         if (Input.NewEmail is null || Input.NewEmail == email)
         {
-            message = "Your email is unchanged.";
+            message = "Az email címe változatlan maradt.";
             return;
         }
 
@@ -125,7 +125,7 @@
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Confirmation link to change email sent. Please check your email.";
+        message = "Megerősítő link elküldve az email címére.";
     }
 
     private async Task OnSendEmailVerificationAsync()
@@ -150,14 +150,14 @@
 
         await EmailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Verification email sent. Please check your email.";
+        message = "Hitelesítő email elküldve.";
     }
 
     private sealed class InputModel
     {
         [Required]
         [EmailAddress]
-        [Display(Name = "New email")]
+        [Display(Name = "Új email")]
         public string? NewEmail { get; set; }
     }
 }

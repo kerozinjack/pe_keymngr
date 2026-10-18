@@ -9,14 +9,15 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWithRecoveryCode> Logger
 
-<PageTitle>Recovery code verification</PageTitle>
+<PageTitle>Helyreállítási kód ellenőrzése</PageTitle>
 
-<h1>Recovery code verification</h1>
+<h1>Helyreállítási kód ellenőrzése</h1>
 <hr />
 <StatusMessage Message="@message" />
 <p>
-    You have requested to log in with a recovery code. This login will not be remembered until you provide
-    an authenticator app code at log in or disable 2FA and log in again.
+    Helyreállítási kóddal szeretnél bejelentkezni. A bejelentkezésedet a rendszer nem jegyzi meg mindaddig, amíg
+    bejelentkezéskor meg nem adod a hitelesítő alkalmazás által generált kódot, vagy ki nem kapcsolod a kétlépcsős hitelesítést,
+    majd újra be nem jelentkezel.
 </p>
 <div class="row">
     <div class="col-md-4">
@@ -24,11 +25,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.RecoveryCode" id="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="RecoveryCode" />
-                <label for="Input.RecoveryCode" class="form-label">Recovery Code</label>
+                <InputText @bind-Value="Input.RecoveryCode" id="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="Helyreállítási kód" />
+                <label for="Input.RecoveryCode" class="form-label">Helyreállítási kód</label>
                 <ValidationMessage For="() => Input.RecoveryCode" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Bejelentkezés</button>
         </EditForm>
     </div>
 </div>
@@ -47,9 +48,9 @@
     {
         Input ??= new();
 
-        // Ensure the user has gone through the username & password screen first
+        // Ellenőrizzük, hogy a felhasználó először megadta-e a felhasználónevét és a jelszavát.
         user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
-            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+            throw new InvalidOperationException("Nem sikerült betölteni a kétlépcsős hitelesítéshez tartozó felhasználót.");
     }
 
     private async Task OnValidSubmitAsync()
@@ -62,18 +63,18 @@
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
+            Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó helyreállítási kóddal bejelentkezett.", userId);
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning("A felhasználói fiókot zárolták.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            Logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}' ", userId);
-            message = "Error: Invalid recovery code entered.";
+            Logger.LogWarning("Érvénytelen helyreállítási kódot adtak meg a(z) '{UserId}' azonosítójú felhasználóhoz.", userId);
+            message = "Hiba: Érvénytelen helyreállítási kód.";
         }
     }
 
@@ -81,7 +82,7 @@
     {
         [Required]
         [DataType(DataType.Text)]
-        [Display(Name = "Recovery Code")]
+        [Display(Name = "Helyreállítási kód")]
         public string RecoveryCode { get; set; } = "";
     }
 }

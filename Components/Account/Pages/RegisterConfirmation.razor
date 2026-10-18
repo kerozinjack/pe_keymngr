@@ -1,4 +1,5 @@
-﻿@page "/Account/RegisterConfirmation"
+﻿```razor
+@page "/Account/RegisterConfirmation"
 
 @using System.Text
 @using Microsoft.AspNetCore.Identity
@@ -10,22 +11,24 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register confirmation</PageTitle>
+<PageTitle>Regisztráció megerősítése</PageTitle>
 
-<h1>Register confirmation</h1>
+<h1>Regisztráció megerősítése</h1>
 
 <StatusMessage Message="@statusMessage" />
 
 @if (emailConfirmationLink is not null)
 {
     <p>
-        This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-        Normally this would be emailed: <a href="@emailConfirmationLink">Click here to confirm your account</a>
+        Az alkalmazásban jelenleg nincs valódi e-mail-küldő beállítva. A valódi e-mail-küldő konfigurálásáról
+        <a href="https://aka.ms/aspaccountconf">ebben az útmutatóban</a> olvashatsz.
+        Normál esetben ezt a hivatkozást e-mailben küldenénk el:
+        <a href="@emailConfirmationLink">Kattints ide a fiókod megerősítéséhez</a>.
     </p>
 }
 else
 {
-    <p role="alert">Please check your email to confirm your account.</p>
+    <p role="alert">A fiókod megerősítéséhez ellenőrizd az e-mail-fiókodat.</p>
 }
 
 @code {
@@ -53,11 +56,11 @@ else
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding user for unspecified email";
+            statusMessage = "Hiba történt: nem található felhasználó a megadott e-mail-címhez.";
         }
         else if (EmailSender is IdentityNoOpEmailSender)
         {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
+            // Valódi e-mail-küldő beállítása után töröld ezt a kódot, amely lehetővé teszi a fiók megerősítését.
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
@@ -67,3 +70,4 @@ else
         }
     }
 }
+```
