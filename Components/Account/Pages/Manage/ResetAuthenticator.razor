@@ -8,24 +8,24 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ResetAuthenticator> Logger
 
-<PageTitle>Reset authenticator key</PageTitle>
+<PageTitle>Hitelesítő alkalmazás kulcsának visszaállítása</PageTitle>
 
 <StatusMessage />
-<h3>Reset authenticator key</h3>
+<h3>Hitelesítő alkalmazás kulcsának visszaállítása</h3>
 <div class="alert alert-warning" role="alert">
     <p>
         <span class="glyphicon glyphicon-warning-sign"></span>
-        <strong>If you reset your authenticator key your authenticator app will not work until you reconfigure it.</strong>
+        <strong>Ha visszaállítod a hitelesítő alkalmazásod kulcsát, az alkalmazás addig nem fog működni, amíg újra be nem állítod.</strong>
     </p>
     <p>
-        This process disables 2FA until you verify your authenticator app.
-        If you do not complete your authenticator app configuration you may lose access to your account.
+        Ez a művelet kikapcsolja a kétlépcsős hitelesítést, amíg újra nem igazolod a hitelesítő alkalmazásod működését.
+        Ha nem fejezed be a hitelesítő alkalmazás beállítását, elveszítheted a hozzáférésedet a fiókodhoz.
     </p>
 </div>
 <div>
     <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
         <AntiforgeryToken />
-        <button class="btn btn-danger" type="submit">Reset authenticator key</button>
+        <button class="btn btn-danger" type="submit">Hitelesítő kulcs visszaállítása</button>
     </form>
 </div>
 
@@ -45,13 +45,13 @@
         await UserManager.SetTwoFactorEnabledAsync(user, false);
         await UserManager.ResetAuthenticatorKeyAsync(user);
         var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' has reset their authentication app key.", userId);
+        Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó visszaállította a hitelesítő alkalmazás kulcsát.", userId);
 
         await SignInManager.RefreshSignInAsync(user);
 
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/EnableAuthenticator",
-            "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
+            "A hitelesítő alkalmazás kulcsa visszaállításra került. Az új kulcs használatával újra be kell állítanod a hitelesítő alkalmazást.",
             HttpContext);
     }
 }

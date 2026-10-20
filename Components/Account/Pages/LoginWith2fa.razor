@@ -9,12 +9,12 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWith2fa> Logger
 
-<PageTitle>Two-factor authentication</PageTitle>
+<PageTitle>Kétlépcsős hitelesítés</PageTitle>
 
-<h1>Two-factor authentication</h1>
+<h1>Kétlépcsős hitelesítés</h1>
 <hr />
 <StatusMessage Message="@message" />
-<p>Your login is protected with an authenticator app. Enter your authenticator code below.</p>
+<p>A bejelentkezésedet egy hitelesítő alkalmazás védi. Add meg alább az alkalmazás által generált kódot.</p>
 <div class="row">
     <div class="col-md-4">
         <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
@@ -24,24 +24,24 @@
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" />
-                <label for="Input.TwoFactorCode" class="form-label">Authenticator code</label>
+                <label for="Input.TwoFactorCode" class="form-label">Hitelesítési kód</label>
                 <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
             </div>
             <div class="checkbox mb-3">
                 <label for="remember-machine" class="form-label">
                     <InputCheckbox @bind-Value="Input.RememberMachine" />
-                    Remember this machine
+                    Emlékezzen erre az eszközre
                 </label>
             </div>
             <div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Bejelentkezés</button>
             </div>
         </EditForm>
     </div>
 </div>
 <p>
-    Don't have access to your authenticator device? You can
-    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
+    Nem férsz hozzá a hitelesítő eszközödhöz? Ebben az esetben
+    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">helyreállítási kóddal is bejelentkezhetsz</a>.
 </p>
 
 @code {
@@ -61,9 +61,9 @@
     {
         Input ??= new();
 
-        // Ensure the user has gone through the username & password screen first
+        // Ellenőrizzük, hogy a felhasználó először megadta-e a felhasználónevét és a jelszavát.
         user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
-            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+            throw new InvalidOperationException("Nem sikerült betölteni a kétlépcsős hitelesítéshez tartozó felhasználót.");
     }
 
     private async Task OnValidSubmitAsync()
@@ -74,30 +74,30 @@
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
+            Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó kétlépcsős hitelesítéssel bejelentkezett.", userId);
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+            Logger.LogWarning("A(z) '{UserId}' azonosítójú felhasználó fiókját zárolták.", userId);
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
-            message = "Error: Invalid authenticator code.";
+            Logger.LogWarning("Érvénytelen hitelesítési kódot adtak meg a(z) '{UserId}' azonosítójú felhasználóhoz.", userId);
+            message = "Hiba: Érvénytelen hitelesítési kód.";
         }
     }
 
     private sealed class InputModel
     {
         [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [StringLength(7, ErrorMessage = "A(z) {0} hossza legalább {2}, legfeljebb {1} karakter lehet.", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Authenticator code")]
+        [Display(Name = "Hitelesítési kód")]
         public string? TwoFactorCode { get; set; }
 
-        [Display(Name = "Remember this machine")]
+        [Display(Name = "Emlékezzen erre az eszközre")]
         public bool RememberMachine { get; set; }
     }
 }
