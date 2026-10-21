@@ -24,6 +24,8 @@ COPY --from=publish /app/publish .
 USER root
 RUN mkdir /app/Data
 RUN chown -R $APP_UID:$APP_UID /app/Data
+RUN apt update
+RUN apt install curl -y
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "PeKeyMngr.dll"]
