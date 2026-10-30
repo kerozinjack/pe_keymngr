@@ -1,0 +1,62 @@
+@page "/maintenancewindows/details"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>MaintenanceWindow</h2>
+    <hr />
+    @if (maintenancewindow is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">StartTime</dt>
+            <dd class="col-sm-10">@maintenancewindow.StartTime</dd>
+            <dt class="col-sm-2">EndTime</dt>
+            <dd class="col-sm-10">@maintenancewindow.EndTime</dd>
+            <dt class="col-sm-2">Affected rooms:</dt>
+            <dd class="col-sm-10">@GetAffectedRooms()</dd>
+        </dl>
+        <div>
+            <a href="@($"/maintenancewindows/edit?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Edit</a> |
+            <a href="@($"/maintenancewindows")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private MaintenanceWindow? maintenancewindow;
+
+    [SupplyParameterFromQuery]
+    private Guid MaintenanceWindowId { get; set; }
+
+    public string GetAffectedRooms()
+    {
+        if (maintenancewindow is null)
+        {
+            return string.Empty;
+        }
+        return string.Join(", ", maintenancewindow.AffectedRooms.Select(r => r.RoomName)).TrimEnd();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        maintenancewindow = await context.MaintenanceWindows.Include(mw => mw.AffectedRooms).FirstOrDefaultAsync(m => m.MaintenanceWindowId == MaintenanceWindowId);
+
+        if (maintenancewindow is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

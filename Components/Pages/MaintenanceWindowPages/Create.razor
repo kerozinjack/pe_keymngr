@@ -1,0 +1,93 @@
+@page "/maintenancewindows/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>MaintenanceWindow</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="MaintenanceWindow" OnValidSubmit="AddMaintenanceWindow" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="starttime" class="form-label">StartTime:</label> 
+                <InputDate Type="InputDateType.DateTimeLocal" id="starttime" @bind-Value="MaintenanceWindow.StartTime" class="form-control" /> 
+                <ValidationMessage For="() => MaintenanceWindow.StartTime" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="endtime" class="form-label">EndTime:</label> 
+                <InputDate Type="InputDateType.DateTimeLocal" id="endtime" @bind-Value="MaintenanceWindow.EndTime" class="form-control" /> 
+                <ValidationMessage For="() => MaintenanceWindow.EndTime" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                @foreach (KeyValuePair<Guid, string> kvp in GetRooms())
+                {
+                    <label for="@kvp.Key">@kvp.Value</label>
+                    <input type="checkbox" @onchange="args => ToggleRoom(kvp.Key, args)" />
+                }
+            </div>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/maintenancewindows">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private MaintenanceWindow MaintenanceWindow { get; set; } = default!;
+
+    protected override void OnInitialized() => MaintenanceWindow ??= new();
+
+    private Dictionary<Guid, string> GetRooms()
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Rooms.ToDictionary(k => k.RoomId, v => v.RoomName);
+    }
+
+    private void ToggleRoom(Guid roomId, ChangeEventArgs args)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Room? r = context.Rooms.FirstOrDefault(room => room.RoomId == roomId);
+        if (r == null)
+        {
+            return;
+        }
+        if (args.Value is bool and true)
+        {
+            if (!MaintenanceWindow.AffectedRooms.Contains(r))
+            {
+                MaintenanceWindow.AffectedRooms.Add(r);
+            }
+        }
+        else
+        {
+            MaintenanceWindow.AffectedRooms.Remove(r);
+        }
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddMaintenanceWindow()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (Room r in MaintenanceWindow.AffectedRooms)
+        {
+            context.Attach(r).State = EntityState.Unchanged;
+        }
+        context.MaintenanceWindows.Add(MaintenanceWindow);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/maintenancewindows");
+    }
+}

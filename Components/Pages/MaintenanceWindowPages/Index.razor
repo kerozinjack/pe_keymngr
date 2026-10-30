@@ -1,0 +1,54 @@
+@page "/maintenancewindows"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="maintenancewindows/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.MaintenanceWindows">
+    <PropertyColumn Property="maintenancewindow => maintenancewindow.StartTime" />
+    <PropertyColumn Property="maintenancewindow => maintenancewindow.EndTime" />
+    <PropertyColumn Property="maintenanceWindow => GetAffectedRooms(maintenanceWindow.MaintenanceWindowId)" Title="Terem" />
+
+    <TemplateColumn Context="maintenancewindow">
+        <a href="@($"maintenancewindows/edit?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Edit</a> |
+        <a href="@($"maintenancewindows/details?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Details</a> |
+        <a href="@($"maintenancewindows/delete?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    private string GetAffectedRooms(Guid maintenancewindowId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        MaintenanceWindow? x = context.MaintenanceWindows.Include(m => m.AffectedRooms)
+            .FirstOrDefault(m => m.MaintenanceWindowId == maintenancewindowId);
+        if (x == null || x.AffectedRooms.Count == 0)
+        {
+            return "Nem lett megadva terem";
+        }
+
+        return string.Join(", ", x.AffectedRooms.Select(z => z.RoomName).ToList()).TrimEnd();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

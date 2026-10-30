@@ -1,0 +1,55 @@
+@page "/rooms"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="rooms/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Rooms">
+    <PropertyColumn Property="room => room.RoomName" />
+    <PropertyColumn Property="room => room.Building" />
+    <PropertyColumn Property="room => room.Floor" />
+    <PropertyColumn Property="room => room.Capacity" />
+    <PropertyColumn Property="room => GetEquipsments(room.RoomId)" Title="Equipments" />
+
+    <TemplateColumn Context="room">
+        <a href="@($"rooms/edit?roomid={room.RoomId}")">Edit</a> |
+        <a href="@($"rooms/details?roomid={room.RoomId}")">Details</a> |
+        <a href="@($"rooms/delete?roomid={room.RoomId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public string GetEquipsments(Guid roomId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Room? r = context.Rooms.Include(r=>r.Equipments).FirstOrDefault(r => r.RoomId == roomId);
+        if (r is null || r.Equipments.Count == 0)
+        {
+            return "Nincs eszköz";
+        }
+
+        return string.Join(", ", r.Equipments.Select(e => e.EquipmentName)).TrimEnd();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

@@ -1,0 +1,188 @@
+@page "/keys/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data.DTO
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Key</h2>
+<hr />
+@if (Key is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Key" OnValidSubmit="UpdateKey" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert"/>
+                <div class="mb-3">
+                    <label for="roomname" class="form-label">RoomName:</label> 
+                    <InputText id="roomname" @bind-Value="Key.KeyName" class="form-control" /> 
+                    <ValidationMessage For="() => Key.KeyName" class="text-danger" /> 
+                </div>
+                <div class="mb-3">
+                    <p>Assigned Rooms</p>
+
+
+                    @foreach (KeyValuePair<string, string> kvp in Rooms)
+                    {
+                        @if (kvp.Key is not null && kvp.Value is not null && Key.AssignedRoomIds is not null)
+                        {
+                            <input type="checkbox" id="@kvp.Key"
+                                   checked="@Key.AssignedRoomIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                                   @onchange="e => ToggleRoom(kvp.Key, e)"/>
+                            <label for="@kvp.Key">@kvp.Value</label>
+                        }
+                    }
+                </div>
+                <div class="mb-3">
+                    <p>Required Roles</p>
+                    @foreach (KeyValuePair<string, string> kvp in RequiredRoles)
+                    {
+                        @if (kvp.Key is not null && kvp.Value is not null && Key.RequiredRoleIds is not null)
+                        {
+                            <input type="checkbox" id="@kvp.Key"
+                                   checked="@Key.RequiredRoleIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                                   @onchange="e => ToggleRole(kvp.Key, e)"/>
+                            <label for="@kvp.Key">@kvp.Value</label>
+                        }
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/keys">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid KeyId { get; set; }
+    private KeyDto? Key { get; set; }
+
+    [SupplyParameterFromForm]
+    private KeyDto? KeyDto { get; set; }
+    private Dictionary<string, string> Rooms { get; set; } = [];
+    private Dictionary<string, string> RequiredRoles { get; set; } = [];
+
+    private void ToggleRoom(string roomId, ChangeEventArgs e)
+    {
+        if (KeyDto == null)
+        {
+            return;
+        }
+        if (e.Value is bool and true)
+        {
+            if (!KeyDto.AssignedRoomIds.Contains(Guid.Parse(roomId)))
+            {
+                KeyDto.AssignedRoomIds.Add(Guid.Parse(roomId));
+            }
+        }
+        else
+        {
+            KeyDto.AssignedRoomIds.Remove(Guid.Parse(roomId));
+        }
+    }
+    
+    private void ToggleRole(string roleId, ChangeEventArgs e)
+    {
+        if (KeyDto == null)
+        {
+            return;
+        }
+        if (e.Value is bool and true)
+        {
+            if (!KeyDto.RequiredRoleIds.Contains(Guid.Parse(roleId)))
+            {
+                KeyDto.RequiredRoleIds.Add(Guid.Parse(roleId));
+            }
+        }
+        else
+        {
+            KeyDto.RequiredRoleIds.Remove(Guid.Parse(roleId));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Rooms = context.Rooms.ToDictionary(k => k.RoomId.ToString("D").ToLowerInvariant(), v => v.RoomName);
+        RequiredRoles = context.CustomRoles.ToDictionary(k => k.RoleId.ToString("D").ToLowerInvariant(), v => v.RoleName);
+        KeyDto ??= new();
+        Key ??= new();
+        KeyDto.FromKey(await context.Keys.Include(key => key.AssignedRooms).Include(key => key.RequiredRoles).FirstOrDefaultAsync(m => m.KeyId == KeyId));
+        Key.FromKey(await context.Keys.Include(key => key.AssignedRooms).Include(key => key.RequiredRoles).FirstOrDefaultAsync(m => m.KeyId == KeyId));
+
+        if (Key is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateKey()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        if (Key is null || KeyDto is null)
+        {
+            NavigationManager.NotFound();
+        }
+        
+        Key!.RequiredRoleIds = KeyDto!.RequiredRoleIds;
+        Key!.AssignedRoomIds = KeyDto!.AssignedRoomIds;
+
+        Key editedKey = Key!.ToKey(context);
+        Key? existingKey = await context.Keys.Include(key => key.AssignedRooms)
+            .Include(key => key.RequiredRoles).FirstOrDefaultAsync(m => m.KeyId == KeyId);
+        if (existingKey is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+        existingKey.AssignedRooms.Clear();
+        existingKey.RequiredRoles.Clear();
+        existingKey.AssignedRooms.AddRange(editedKey.AssignedRooms);
+        existingKey.RequiredRoles.AddRange(editedKey.RequiredRoles);
+        context.Attach(existingKey).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!KeyExists(Key!.KeyId))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/keys");
+    }
+
+    private bool KeyExists(Guid keyid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Keys.Any(e => e.KeyId == keyid);
+    }
+}

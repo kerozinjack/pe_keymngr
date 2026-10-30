@@ -1,0 +1,48 @@
+@page "/reservations/details"
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Reservation</h2>
+    <hr />
+    @if (reservation is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">StartTime</dt>
+            <dd class="col-sm-10">@reservation.StartTime</dd>
+            <dt class="col-sm-2">EndTime</dt>
+            <dd class="col-sm-10">@reservation.EndTime</dd>
+        </dl>
+        <div>
+            <a href="@($"/reservations/edit?reservationid={reservation.ReservationId}")">Edit</a> |
+            <a href="@($"/reservations")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Reservation? reservation;
+
+    [SupplyParameterFromQuery]
+    private Guid ReservationId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        reservation = await context.Reservations.FirstOrDefaultAsync(m => m.ReservationId == ReservationId);
+
+        if (reservation is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}
