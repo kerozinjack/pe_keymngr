@@ -6,7 +6,8 @@ namespace PeKeyMngr.Models
     public class Key
     {
         public Guid KeyId { get; set; }
-        public string RoomName { get; set; } = string.Empty;
+        public string KeyName { get; set; } = string.Empty;
+        public List<Room> AssignedRooms { get; set; } = [];
         public List<Role> RequiredRoles { get; set; } = [];
     }
 }

@@ -15,14 +15,14 @@ namespace PeKeyMngr.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
             modelBuilder.Entity("EquipmentReservation", b =>
                 {
-                    b.Property<Guid>("EquipmentsEquipmentId")
+                    b.Property<string>("EquipmentsEquipmentId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("ReservationId")
+                    b.Property<string>("ReservationId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("EquipmentsEquipmentId", "ReservationId");
@@ -34,10 +34,10 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("EquipmentRoom", b =>
                 {
-                    b.Property<Guid>("EquipmentsEquipmentId")
+                    b.Property<string>("EquipmentsEquipmentId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("RoomId")
+                    b.Property<string>("RoomId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("EquipmentsEquipmentId", "RoomId");
@@ -49,10 +49,10 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("KeyRole", b =>
                 {
-                    b.Property<Guid>("KeyId")
+                    b.Property<string>("KeyId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("RequiredRolesRoleId")
+                    b.Property<string>("RequiredRolesRoleId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("KeyId", "RequiredRolesRoleId");
@@ -62,12 +62,27 @@ namespace PeKeyMngr.Migrations
                     b.ToTable("KeyRole", (string)null);
                 });
 
-            modelBuilder.Entity("MaintenanceWindowRoom", b =>
+            modelBuilder.Entity("KeyRoom", b =>
                 {
-                    b.Property<Guid>("AffectedRoomsRoomId")
+                    b.Property<string>("AssignedRoomsRoomId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("MaintenanceWindowId")
+                    b.Property<string>("KeyId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AssignedRoomsRoomId", "KeyId");
+
+                    b.HasIndex("KeyId");
+
+                    b.ToTable("KeyRoom", (string)null);
+                });
+
+            modelBuilder.Entity("MaintenanceWindowRoom", b =>
+                {
+                    b.Property<string>("AffectedRoomsRoomId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaintenanceWindowId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("AffectedRoomsRoomId", "MaintenanceWindowId");
@@ -296,8 +311,11 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.AuditLog", b =>
                 {
-                    b.Property<Guid>("LogId")
+                    b.Property<string>("LogId")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Severity")
@@ -318,7 +336,7 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.Equipment", b =>
                 {
-                    b.Property<Guid>("EquipmentId")
+                    b.Property<string>("EquipmentId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -333,11 +351,12 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.IssueTicket", b =>
                 {
-                    b.Property<Guid>("TicketId")
+                    b.Property<string>("TicketId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("AffectedRoomRoomId")
+                    b.Property<string>("AffectedRoomRoomId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("IssueDescription")
@@ -361,11 +380,11 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.Key", b =>
                 {
-                    b.Property<Guid>("KeyId")
+                    b.Property<string>("KeyId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RoomName")
+                    b.Property<string>("KeyName")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -386,7 +405,8 @@ namespace PeKeyMngr.Migrations
                     b.Property<int>("Direction")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("KeyId")
+                    b.Property<string>("KeyId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ParticipantId")
@@ -408,7 +428,7 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.MaintenanceWindow", b =>
                 {
-                    b.Property<Guid>("MaintenanceWindowId")
+                    b.Property<string>("MaintenanceWindowId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -425,7 +445,7 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.Reservation", b =>
                 {
-                    b.Property<Guid>("ReservationId")
+                    b.Property<string>("ReservationId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -435,7 +455,8 @@ namespace PeKeyMngr.Migrations
                     b.Property<string>("RequestedById")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("RoomId")
+                    b.Property<string>("RoomId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("StartTime")
@@ -452,7 +473,7 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.Role", b =>
                 {
-                    b.Property<Guid>("RoleId")
+                    b.Property<string>("RoleId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -472,7 +493,7 @@ namespace PeKeyMngr.Migrations
 
             modelBuilder.Entity("PeKeyMngr.Models.Room", b =>
                 {
-                    b.Property<Guid>("RoomId")
+                    b.Property<string>("RoomId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
@@ -537,6 +558,21 @@ namespace PeKeyMngr.Migrations
                     b.HasOne("PeKeyMngr.Models.Role", null)
                         .WithMany()
                         .HasForeignKey("RequiredRolesRoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KeyRoom", b =>
+                {
+                    b.HasOne("PeKeyMngr.Models.Room", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedRoomsRoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PeKeyMngr.Models.Key", null)
+                        .WithMany()
+                        .HasForeignKey("KeyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

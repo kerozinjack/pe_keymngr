@@ -1,0 +1,164 @@
+@page "/rooms/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Room</h2>
+<hr />
+@if (Room is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Room" OnValidSubmit="UpdateRoom" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="Room.RoomId" value="@Room.RoomId" />
+                <div class="mb-3">
+                    <label for="roomname" class="form-label">RoomName:</label>
+                    <InputText id="roomname" @bind-Value="Room.RoomName" class="form-control" />
+                    <ValidationMessage For="() => Room.RoomName" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="building" class="form-label">Building:</label>
+                    <InputText id="building" @bind-Value="Room.Building" class="form-control" />
+                    <ValidationMessage For="() => Room.Building" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="floor" class="form-label">Floor:</label>
+                    <InputText id="floor" @bind-Value="Room.Floor" class="form-control" />
+                    <ValidationMessage For="() => Room.Floor" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="capacity" class="form-label">Capacity:</label>
+                    <InputNumber id="capacity" @bind-Value="Room.Capacity" class="form-control" />
+                    <ValidationMessage For="() => Room.Capacity" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <h3>Equipments</h3>
+                    @foreach (KeyValuePair<Guid, string> kvp in GetEquipments())
+                    {
+                        <label for="@kvp.Key">@kvp.Value</label>
+                        <input type="checkbox" id="@kvp.Key" @onchange="args => ToggleEquipment(kvp.Key, args)" checked="@IsEquippedWith(kvp.Key)"/>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/rooms">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid RoomId { get; set; }
+
+    [SupplyParameterFromForm]
+    private Room? Room { get; set; }
+
+    private List<Equipment> Equipments { get; set; } = new();
+
+    private void ToggleEquipment(Guid equipmentId, ChangeEventArgs args)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Equipment? eq = context.Equipments.FirstOrDefault(e=>e.EquipmentId ==  equipmentId);
+        if (eq is null)
+        {
+            return;
+        }
+
+        if (args.Value is bool and true)
+        {
+            if (!Equipments.Contains(eq))
+            {
+                Equipments.Add(eq);
+            }
+        }
+        else
+        {
+            Equipments = Equipments.FindAll(e=>e.EquipmentId !=  equipmentId);
+        }
+    }
+    
+    public bool IsEquippedWith(Guid equipmentId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Room? ro = context.Rooms.Include(r => r.Equipments).FirstOrDefault(r => r.RoomId == RoomId);
+        if (ro is null)
+        {
+            return false;
+        }
+        return ro.Equipments.Any(e=>e.EquipmentId == equipmentId);
+    }
+
+    public Dictionary<Guid, string> GetEquipments()
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Equipments.ToDictionary(e => e.EquipmentId, e => e.EquipmentName);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Room ??= await context.Rooms.Include(r=>r.Equipments).FirstOrDefaultAsync(m => m.RoomId == RoomId);
+
+        if (Room is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateRoom()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        context.Attach(Room!).State = EntityState.Modified;
+        Room!.Equipments.Clear();
+        foreach (Equipment equipment in Equipments)
+        {
+            context.Attach(equipment).State = EntityState.Unchanged;
+            Room!.Equipments.Add(equipment);
+        }
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!RoomExists(Room!.RoomId))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/rooms");
+    }
+
+    private bool RoomExists(Guid roomid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Rooms.Any(e => e.RoomId == roomid);
+    }
+}

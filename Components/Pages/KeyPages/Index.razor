@@ -1,0 +1,54 @@
+@page "/keys"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="keys/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Keys">
+    <PropertyColumn Property="key => key.KeyName" />
+    <PropertyColumn Property="key => GetAssignedRooms(key.KeyId)" Title="Terem" />
+
+    <TemplateColumn Context="key">
+        <a href="@($"keys/edit?keyid={key.KeyId}")">Edit</a> |
+        <a href="@($"keys/details?keyid={key.KeyId}")">Details</a> |
+        <a href="@($"keys/delete?keyid={key.KeyId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    private string GetAssignedRooms(Guid keyId)
+    {
+        Key? x = context.Keys.Include(k => k.AssignedRooms)
+            .FirstOrDefault(k => k.KeyId == keyId);
+        if (x == null || x.AssignedRooms.Count == 0)
+        {
+            return "Nincs hozzárendelt szoba";
+        }
+        
+        
+        return string.Join(", ", x.AssignedRooms.Select(room => room.RoomName)).TrimEnd();
+    }
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

@@ -1,0 +1,77 @@
+@page "/keys/details"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Key</h2>
+    <hr />
+    @if (key is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">RoomName</dt>
+            <dd class="col-sm-10">@key.KeyName</dd>
+            <dt class="col-sm-2">Assigned Rooms</dt>
+            <dd class="col-sm-10">@GetAssignedRooms()</dd>
+            <dt class="col-sm-2">Required roles</dt>
+            <dd class="col-sm-10">@GetRequiredRoles()</dd>
+        </dl>
+        <div>
+            <a href="@($"/keys/edit?keyid={key.KeyId}")">Edit</a> |
+            <a href="@($"/keys")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Key? key;
+
+    [SupplyParameterFromQuery]
+    private Guid KeyId { get; set; }
+
+    private string GetAssignedRooms()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Key? x = context.Keys.Include(key => key.AssignedRooms).Where(key => key.KeyId == KeyId).FirstOrDefault();
+        if (x is null || x.AssignedRooms.Count == 0)
+        {
+            return "Nincs hozzárendelt terem";
+        }
+
+        return string.Join(", ", x.AssignedRooms.Select(room => room.RoomName)).TrimEnd();
+    }
+    
+    private string GetRequiredRoles()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Key? x = context.Keys.Include(key => key.RequiredRoles).Where(key => key.KeyId == KeyId).FirstOrDefault();
+        if (x is null || x.RequiredRoles.Count == 0)
+        {
+            return "Nem igényel speciális jogosultságot";
+        }
+
+        return string.Join(", ", x.RequiredRoles.Select(role => role.RoleName)).TrimEnd();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        key = await context.Keys.Include(key => key.RequiredRoles).FirstOrDefaultAsync(m => m.KeyId == KeyId);
+
+        if (key is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

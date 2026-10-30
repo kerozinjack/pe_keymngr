@@ -1,0 +1,57 @@
+@page "/rooms/details"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Room</h2>
+    <hr />
+    @if (room is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">RoomName</dt>
+            <dd class="col-sm-10">@room.RoomName</dd>
+            <dt class="col-sm-2">Building</dt>
+            <dd class="col-sm-10">@room.Building</dd>
+            <dt class="col-sm-2">Floor</dt>
+            <dd class="col-sm-10">@room.Floor</dd>
+            <dt class="col-sm-2">Capacity</dt>
+            <dd class="col-sm-10">@room.Capacity</dd>
+            <dt class="col-sm-2">Equipments</dt>
+            <dd class="col-sm-10">@string.Join(", ", room.Equipments.Select(e=>e.EquipmentName)).TrimEnd()</dd>
+        </dl>
+        <div>
+            <a href="@($"/rooms/edit?roomid={room.RoomId}")">Edit</a> |
+            <a href="@($"/rooms")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Room? room;
+
+    [SupplyParameterFromQuery]
+    private Guid RoomId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        room = await context.Rooms.Include(r=>r.Equipments).FirstOrDefaultAsync(m => m.RoomId == RoomId);
+
+        if (room is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

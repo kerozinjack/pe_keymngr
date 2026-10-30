@@ -10,6 +10,7 @@ namespace PeKeyMngr.Models
     public class AuditLog
     {
         public Guid LogId { get; set; }
+        public DateTime Date { get; set; }
         public Severity Severity { get; set; }
         public string Subsystem { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;

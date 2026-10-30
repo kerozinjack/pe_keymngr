@@ -1,0 +1,49 @@
+@page "/equipment/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Equipment</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Equipment" OnValidSubmit="AddEquipment" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="equipmentname" class="form-label">EquipmentName:</label> 
+                <InputText id="equipmentname" @bind-Value="Equipment.EquipmentName" class="form-control" /> 
+                <ValidationMessage For="() => Equipment.EquipmentName" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/equipment">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Equipment Equipment { get; set; } = default!;
+
+    protected override void OnInitialized() => Equipment ??= new();
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddEquipment()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Equipments.Add(Equipment);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/equipment");
+    }
+}

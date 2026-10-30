@@ -1,0 +1,106 @@
+@page "/rooms/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Room</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Room" OnValidSubmit="AddRoom" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="roomname" class="form-label">RoomName:</label> 
+                <InputText id="roomname" @bind-Value="Room.RoomName" class="form-control" /> 
+                <ValidationMessage For="() => Room.RoomName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="building" class="form-label">Building:</label> 
+                <InputText id="building" @bind-Value="Room.Building" class="form-control" /> 
+                <ValidationMessage For="() => Room.Building" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="floor" class="form-label">Floor:</label> 
+                <InputText id="floor" @bind-Value="Room.Floor" class="form-control" /> 
+                <ValidationMessage For="() => Room.Floor" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="capacity" class="form-label">Capacity:</label> 
+                <InputNumber id="capacity" @bind-Value="Room.Capacity" class="form-control" /> 
+                <ValidationMessage For="() => Room.Capacity" class="text-danger" /> 
+            </div>   
+            <div class="mb-3">
+                <h3>Equipments</h3>
+                @foreach (KeyValuePair<Guid, string> kvp in GetEquipments())
+                {
+                    <label for="@kvp.Key">@kvp.Value</label>
+                    <input type="checkbox" id="@kvp.Key" @onchange="args => ToggleEquipment(kvp.Key, args)" />
+                }
+            </div>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/rooms">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Room Room { get; set; } = default!;
+    private List<Equipment> Equipments { get; set; } = [];
+
+    private void ToggleEquipment(Guid id, ChangeEventArgs args)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Equipment? eq = context.Equipments.FirstOrDefault(e => e.EquipmentId == id);
+        if (eq is null)
+        {
+            return;
+        }
+        if (args.Value is bool and true)
+        {
+            if (!Equipments.Contains(eq))
+            {
+                Equipments.Add(eq);
+            }
+        }
+        else
+        {
+            Equipments = Equipments.FindAll(e=>e.EquipmentId != eq.EquipmentId);
+        }
+    }
+
+    protected override void OnInitialized() => Room ??= new();
+
+    private Dictionary<Guid, string> GetEquipments()
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Equipments.ToDictionary(k => k.EquipmentId, v => v.EquipmentName);
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddRoom()
+    {
+        using var context = DbFactory.CreateDbContext();
+        foreach (Equipment equipment in Equipments)
+        {
+            context.Attach(equipment).State = EntityState.Unchanged;
+            Room.Equipments.Add(equipment);
+        }
+        context.Rooms.Add(Room);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/rooms");
+    }
+}

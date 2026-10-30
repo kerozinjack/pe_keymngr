@@ -27,6 +27,10 @@ namespace PeKeyMngr.Data
                 .HasMany(k => k.RequiredRoles)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("KeyRole"));
+            builder.Entity<Key>()
+                .HasMany(k=>k.AssignedRooms)
+                .WithMany()
+                .UsingEntity(j => j.ToTable("KeyRoom"));
             builder.Entity<Room>()
                 .HasMany(r => r.Equipments)
                 .WithMany()
@@ -39,6 +43,47 @@ namespace PeKeyMngr.Data
                 .HasMany(r => r.Equipments)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("ReservationEquipment"));
+            
+            builder.Entity<AuditLog>()
+                .Property(x => x.LogId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<Equipment>()
+                .Property(x => x.EquipmentId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<IssueTicket>()
+                .Property(x => x.TicketId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<Key>()
+                .Property(x => x.KeyId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<MaintenanceWindow>()
+                .Property(x => x.MaintenanceWindowId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<Reservation>()
+                .Property(x => x.ReservationId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<Role>()
+                .Property(x => x.RoleId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
+            builder.Entity<Room>()
+                .Property(x => x.RoomId)
+                .HasConversion(
+                    id => id.ToString("D").ToLowerInvariant(),
+                    value => Guid.Parse(value));
         }
     }
 }

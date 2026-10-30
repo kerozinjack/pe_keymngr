@@ -1,0 +1,70 @@
+@page "/rooms/delete"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Room</h2>
+    <hr />
+    @if (room is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">RoomName</dt>
+            <dd class="col-sm-10">@room.RoomName</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Building</dt>
+            <dd class="col-sm-10">@room.Building</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Floor</dt>
+            <dd class="col-sm-10">@room.Floor</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Capacity</dt>
+            <dd class="col-sm-10">@room.Capacity</dd>
+        </dl>
+        <EditForm method="post" Model="room" OnValidSubmit="DeleteRoom" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(room is null)">Delete</button> |
+            <a href="/rooms">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Room? room;
+
+    [SupplyParameterFromQuery]
+    private Guid RoomId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        room = await context.Rooms.FirstOrDefaultAsync(m => m.RoomId == RoomId);
+
+        if (room is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    private async Task DeleteRoom()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Rooms.Remove(room!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/rooms");
+    }
+}

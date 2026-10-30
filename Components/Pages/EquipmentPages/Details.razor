@@ -1,0 +1,49 @@
+@page "/equipment/details"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Equipment</h2>
+    <hr />
+    @if (equipment is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">EquipmentName</dt>
+            <dd class="col-sm-10">@equipment.EquipmentName</dd>
+        </dl>
+        <div>
+            <a href="@($"/equipment/edit?equipmentid={equipment.EquipmentId}")">Edit</a> |
+            <a href="@($"/equipment")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Equipment? equipment;
+
+    [SupplyParameterFromQuery]
+    private Guid EquipmentId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        equipment = await context.Equipments.FirstOrDefaultAsync(m => m.EquipmentId == EquipmentId);
+
+        if (equipment is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

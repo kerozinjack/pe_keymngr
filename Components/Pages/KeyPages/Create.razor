@@ -1,0 +1,146 @@
+@page "/keys/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data.DTO
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Key</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Key" OnValidSubmit="AddKey" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="roomname" class="form-label">RoomName:</label> 
+                <InputText id="roomname" @bind-Value="Key.KeyName" class="form-control" /> 
+                <ValidationMessage For="() => Key.KeyName" class="text-danger" /> 
+            </div>
+            <div class="mb-3">
+                <p>Assigned Rooms</p>
+
+
+                @foreach (KeyValuePair<string, string> kvp in Rooms)
+                {
+                    @if (kvp.Key is not null && kvp.Value is not null && Key.AssignedRoomIds is not null)
+                    {
+                        <input type="checkbox" id="@kvp.Key"
+                               checked="@Key.AssignedRoomIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                               @onchange="e => ToggleRoom(kvp.Key, e)"/>
+                        <label for="@kvp.Key">@kvp.Value</label>
+                    }
+                }
+            </div>
+            <div class="mb-3">
+                <p>Required Roles</p>
+                @foreach (KeyValuePair<string, string> kvp in RequiredRoles)
+                {
+                    @if (kvp.Key is not null && kvp.Value is not null && Key.RequiredRoleIds is not null)
+                    {
+                        <input type="checkbox" id="@kvp.Key"
+                               checked="@Key.RequiredRoleIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                               @onchange="e => ToggleRole(kvp.Key, e)"/>
+                        <label for="@kvp.Key">@kvp.Value</label>
+                    }
+                }
+            </div>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/keys">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private KeyDto Key { get; set; } = default!;
+    private Dictionary<string, string> Rooms { get; set; } = [];
+    private Dictionary<string, string> RequiredRoles { get; set; } = [];
+
+    private void ToggleRoom(string roomId, ChangeEventArgs e)
+    {
+        if (e.Value is bool and true)
+        {
+            if (!Key.AssignedRoomIds.Contains(Guid.Parse(roomId)))
+            {
+                Key.AssignedRoomIds.Add(Guid.Parse(roomId));
+            }
+        }
+        else
+        {
+            Key.AssignedRoomIds.Remove(Guid.Parse(roomId));
+        }
+    }
+    
+    private void ToggleRole(string roleId, ChangeEventArgs e)
+    {
+        if (e.Value is bool and true)
+        {
+            if (!Key.RequiredRoleIds.Contains(Guid.Parse(roleId)))
+            {
+                Key.RequiredRoleIds.Add(Guid.Parse(roleId));
+            }
+        }
+        else
+        {
+            Key.RequiredRoleIds.Remove(Guid.Parse(roleId));
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Key ??= new();
+        using var context =  DbFactory.CreateDbContext();
+        Rooms = context.Rooms.ToDictionary(k => k.RoomId.ToString("D").ToLowerInvariant(), v => v.RoomName);
+        RequiredRoles = context.CustomRoles.ToDictionary(k => k.RoleId.ToString("D").ToLowerInvariant(), v => v.RoleName);
+    }
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddKey()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        Key key = new()
+        {
+            KeyId = Guid.NewGuid(),
+            KeyName = Key.KeyName,
+            AssignedRooms = [],
+            RequiredRoles = []
+        };
+
+        foreach (Guid guid in Key.AssignedRoomIds)
+        {
+            Room? tmp = context.Rooms.FirstOrDefault(room => room.RoomId == guid);
+            if (tmp == null)
+            {
+                return;
+            }
+            key.AssignedRooms.Add(tmp);
+        }
+        
+        foreach (Guid guid in Key.RequiredRoleIds)
+        {
+            Role? tmp = context.CustomRoles.FirstOrDefault(role => role.RoleId == guid);
+            if (tmp == null)
+            {
+                return;
+            }
+            key.RequiredRoles.Add(tmp);
+        }
+        
+        context.Keys.Add(key);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/keys");
+    }
+}

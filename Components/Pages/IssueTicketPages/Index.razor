@@ -1,0 +1,42 @@
+@page "/issuetickets"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="issuetickets/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.IssueTickets.Include(ticket=>ticket.ReportedBy).Include(ticket=>ticket.AffectedRoom)">
+    <PropertyColumn Property="issueticket => issueticket.Timestamp" />
+    <PropertyColumn Property="issueticket => issueticket.AffectedRoom.RoomName" />
+    <PropertyColumn Property="issueticket => issueticket.IssueDescription" />
+    <PropertyColumn Property="issueticket => issueticket.ReportedBy.UserName" Title="Reported by" />
+
+    <TemplateColumn Context="issueticket">
+        <a href="@($"issuetickets/edit?ticketid={issueticket.TicketId}")">Edit</a> |
+        <a href="@($"issuetickets/details?ticketid={issueticket.TicketId}")">Details</a> |
+        <a href="@($"issuetickets/delete?ticketid={issueticket.TicketId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

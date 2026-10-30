@@ -1,0 +1,165 @@
+@page "/maintenancewindows/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>MaintenanceWindow</h2>
+<hr />
+@if (MaintenanceWindow is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="MaintenanceWindow" OnValidSubmit="UpdateMaintenanceWindow" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="MaintenanceWindow.MaintenanceWindowId" value="@MaintenanceWindow.MaintenanceWindowId" />
+                <div class="mb-3">
+                    <label for="starttime" class="form-label">StartTime:</label>
+                    <InputDate id="starttime" @bind-Value="MaintenanceWindow.StartTime" class="form-control" />
+                    <ValidationMessage For="() => MaintenanceWindow.StartTime" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="endtime" class="form-label">EndTime:</label>
+                    <InputDate id="endtime" @bind-Value="MaintenanceWindow.EndTime" class="form-control" />
+                    <ValidationMessage For="() => MaintenanceWindow.EndTime" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    @foreach (KeyValuePair<Guid, string> kvp in GetRooms())
+                    {
+                        <label for="@kvp.Key">@kvp.Value</label>
+                        <input type="checkbox" @onchange="args => ToggleRoom(kvp.Key, args)" checked="@IsAffectedRoom(kvp.Key)" />
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/maintenancewindows">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid MaintenanceWindowId { get; set; }
+
+    [SupplyParameterFromForm]
+    private MaintenanceWindow? MaintenanceWindow { get; set; }
+
+    private List<Room> AffRooms = [];
+
+    private Dictionary<Guid, string> GetRooms()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        if (MaintenanceWindow is null)
+        {
+            return new();
+        }
+        return context.Rooms.ToDictionary(k => k.RoomId, v => v.RoomName);
+    }
+
+    public bool IsAffectedRoom(Guid roomId)
+    {
+        if (MaintenanceWindow is null)
+        {
+            return false;
+        }
+        using var context = DbFactory.CreateDbContext();
+        return context.MaintenanceWindows.Include(mw => mw.AffectedRooms).Where(mw => mw.MaintenanceWindowId == MaintenanceWindowId).SelectMany(mw => mw.AffectedRooms).Any(r => r.RoomId == roomId);
+    }
+    
+    private void ToggleRoom(Guid roomId, ChangeEventArgs args)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Room? r = context.Rooms.FirstOrDefault(room => room.RoomId == roomId);
+        if (r == null)
+        {
+            return;
+        }
+        if (args.Value is bool and true)
+        {
+            if (!AffRooms.Contains(r))
+            {
+                AffRooms.Add(r);
+            }
+        }
+        else
+        {
+            AffRooms = AffRooms.FindAll(x => x.RoomId != r.RoomId);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        MaintenanceWindow ??= await context.MaintenanceWindows.Include(mw => mw.AffectedRooms).FirstOrDefaultAsync(m => m.MaintenanceWindowId == MaintenanceWindowId);
+
+        if (MaintenanceWindow is null)
+        {
+            NavigationManager.NotFound();
+        }
+        AffRooms = MaintenanceWindow!.AffectedRooms;
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateMaintenanceWindow()
+    {
+        using var context = DbFactory.CreateDbContext();
+        MaintenanceWindow? mw = context.MaintenanceWindows.Include(mw => mw.AffectedRooms).FirstOrDefault(m => m.MaintenanceWindowId == MaintenanceWindowId);
+
+        if (mw is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+        
+        context.Attach(mw).State = EntityState.Modified;
+        mw.AffectedRooms.Clear();
+        foreach (Room room in AffRooms)
+        {
+            context.Attach(room).State = EntityState.Unchanged;
+            mw.AffectedRooms.Add(room);
+        }
+        
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!MaintenanceWindowExists(MaintenanceWindow!.MaintenanceWindowId))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/maintenancewindows");
+    }
+
+    private bool MaintenanceWindowExists(Guid maintenancewindowid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.MaintenanceWindows.Any(e => e.MaintenanceWindowId == maintenancewindowid);
+    }
+}

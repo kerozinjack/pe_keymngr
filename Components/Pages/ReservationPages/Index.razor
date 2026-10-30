@@ -1,0 +1,54 @@
+@page "/reservations"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="reservations/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Reservations.Include(r=>r.Room).Include(r=>r.Equipments)">
+    <PropertyColumn Property="reservation => reservation.StartTime" />
+    <PropertyColumn Property="reservation => reservation.EndTime" />
+    <PropertyColumn Property="reservation => reservation.Room.RoomName" />
+    <PropertyColumn Property="reservation => GetEquipments(reservation.ReservationId)" Title="Equipments" />
+
+    <TemplateColumn Context="reservation">
+        <a href="@($"reservations/edit?reservationid={reservation.ReservationId}")">Edit</a> |
+        <a href="@($"reservations/details?reservationid={reservation.ReservationId}")">Details</a> |
+        <a href="@($"reservations/delete?reservationid={reservation.ReservationId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public string GetEquipments(Guid reservationId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        Reservation? res = context.Reservations.Include(r => r.Equipments).FirstOrDefault(r => r.ReservationId == reservationId);
+        if (res is null)
+        {
+            return "Nincs igényelt eszköz";
+        }
+
+        return string.Join(", ", res.Equipments.Select(e => e.EquipmentName)).TrimEnd();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

@@ -1,0 +1,32 @@
+@page "/auditlogs"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PeKeyMngr.Models
+@using PeKeyMngr.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<QuickGrid Class="table" Items="context.AuditLogs">
+    <PropertyColumn Property="auditlog => auditlog.Date"></PropertyColumn>
+    <PropertyColumn Property="auditlog => auditlog.Severity"/>
+    <PropertyColumn Property="auditlog => auditlog.Subsystem"/>
+    <PropertyColumn Property="auditlog => auditlog.Text"/>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
