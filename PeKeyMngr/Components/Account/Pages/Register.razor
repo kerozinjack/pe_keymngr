@@ -1,0 +1,232 @@
+﻿@page "/Account/Register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using PeKeyMngr.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Register</PageTitle>
+
+<PageTitle>Regisztráció</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+
+        <div class="col-12 col-md-10 col-lg-9 col-xl-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+
+                <div class="row g-0">
+
+                    <!-- Regisztráció -->
+                    <div class="col-lg-12">
+                        <div class="card-body p-4 p-md-5">
+
+                            <div class="mb-4">
+                                <h1 class="fw-bold mb-2">Fiók létrehozása</h1>
+                                <p class="text-secondary mb-0">
+                                    Regisztrálj, hogy elkezdhesd használni a PeKeyMngr-t.
+                                </p>
+                            </div>
+
+                            <StatusMessage Message="@Message" />
+
+                            <EditForm Model="Input"
+                                      method="post"
+                                      OnValidSubmit="RegisterUser"
+                                      FormName="register">
+
+                                <DataAnnotationsValidator />
+
+                                <ValidationSummary class="text-danger" role="alert" />
+
+                                <!-- E-mail -->
+                                <div class="mb-3">
+                                    <label for="Input.Email" class="form-label fw-semibold">
+                                        E-mail
+                                    </label>
+
+                                    <InputText @bind-Value="Input.Email"
+                                               id="Input.Email"
+                                               class="form-control form-control-lg"
+                                               autocomplete="username"
+                                               aria-required="true"
+                                               placeholder="nev@example.com" />
+
+                                    <ValidationMessage For="() => Input.Email"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Jelszó -->
+                                <div class="mb-3">
+                                    <label for="Input.Password" class="form-label fw-semibold">
+                                        Jelszó
+                                    </label>
+
+                                    <InputText type="password"
+                                               @bind-Value="Input.Password"
+                                               id="Input.Password"
+                                               class="form-control form-control-lg"
+                                               autocomplete="new-password"
+                                               aria-required="true"
+                                               placeholder="Hozz létre egy jelszót" />
+
+                                    <ValidationMessage For="() => Input.Password"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Jelszó megerősítése -->
+                                <div class="mb-4">
+                                    <label for="Input.ConfirmPassword" class="form-label fw-semibold">
+                                        Jelszó megerősítése
+                                    </label>
+
+                                    <InputText type="password"
+                                               @bind-Value="Input.ConfirmPassword"
+                                               id="Input.ConfirmPassword"
+                                               class="form-control form-control-lg"
+                                               autocomplete="new-password"
+                                               aria-required="true"
+                                               placeholder="Erősítsd meg a jelszavad" />
+
+                                    <ValidationMessage For="() => Input.ConfirmPassword"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Regisztráció -->
+                                <button type="submit"
+                                        class="btn btn-primary btn-lg w-100">
+                                    Fiók létrehozása
+                                </button>
+
+                                <!-- Bejelentkezési link -->
+                                <div class="text-center mt-4">
+                                    <span class="text-secondary">
+                                        Már van fiókod?
+                                    </span>
+
+                                    <a href="Account/Login"
+                                       class="text-decoration-none ms-1">
+                                        Bejelentkezés
+                                    </a>
+                                </div>
+
+                            </EditForm>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+@code {
+    private IEnumerable<IdentityError>? identityErrors;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var user = CreateUser();
+
+        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password.");
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegisterConfirmation",
+                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        }
+        else
+        {
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

@@ -1,0 +1,69 @@
+﻿@page "/Account/ConfirmEmailChange"
+
+@using System.Text
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using PeKeyMngr.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>E-mail-cím módosításának megerősítése</PageTitle>
+
+<h1>E-mail-cím módosításának megerősítése</h1>
+
+<StatusMessage Message="@message" />
+
+@code {
+    private string? message;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? UserId { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Code { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserId is null || Email is null || Code is null)
+        {
+            RedirectManager.RedirectToWithStatus(
+                "Account/Login", "Hiba: Érvénytelen e-mail-cím-módosítást megerősítő hivatkozás.", HttpContext);
+            return;
+        }
+
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null)
+        {
+            message = "Nem található felhasználó a(z) '{userId}' azonosítóval.";
+            return;
+        }
+
+        var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+        var result = await UserManager.ChangeEmailAsync(user, Email, code);
+        if (!result.Succeeded)
+        {
+            message = "Hiba történt az e-mail-cím módosításakor.";
+            return;
+        }
+
+        // A felületünkön az e-mail-cím és a felhasználónév megegyezik, ezért az e-mail-cím
+        // módosításakor a felhasználónevet is frissítenünk kell.
+        var setUserNameResult = await UserManager.SetUserNameAsync(user, Email);
+        if (!setUserNameResult.Succeeded)
+        {
+            message = "Hiba történt a felhasználónév módosításakor.";
+            return;
+        }
+
+        await SignInManager.RefreshSignInAsync(user);
+        message = "Köszönjük, hogy megerősítetted az e-mail-címed módosítását.";
+    }
+}

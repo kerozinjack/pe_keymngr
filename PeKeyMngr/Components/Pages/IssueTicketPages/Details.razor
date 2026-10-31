@@ -1,0 +1,55 @@
+@page "/issuetickets/details"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>IssueTicket</h2>
+    <hr />
+    @if (issueticket is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Timestamp</dt>
+            <dd class="col-sm-10">@issueticket.Timestamp</dd>
+            <dt class="col-sm-2">IssueDescription</dt>
+            <dd class="col-sm-10">@issueticket.IssueDescription</dd>
+            <dt class="col-sm-2">Affected Room</dt>
+            <dd class="col-sm-10">@issueticket.AffectedRoom.RoomName</dd>
+            <dt class="col-sm-2">Reported By</dt>
+            <dd class="col-sm-10">@issueticket.ReportedBy.UserName</dd>
+        </dl>
+        <div>
+            <a href="@($"/issuetickets/edit?ticketid={issueticket.TicketId}")">Edit</a> |
+            <a href="@($"/issuetickets")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private IssueTicket? issueticket;
+
+    [SupplyParameterFromQuery]
+    private Guid TicketId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        issueticket = await context.IssueTickets.Include(ticket => ticket.AffectedRoom).Include(ticket => ticket.ReportedBy).FirstOrDefaultAsync(m => m.TicketId == TicketId);
+
+        if (issueticket is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

@@ -1,0 +1,57 @@
+﻿@page "/Account/Manage/ResetAuthenticator"
+
+@using Microsoft.AspNetCore.Identity
+@using PeKeyMngr.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<ResetAuthenticator> Logger
+
+<PageTitle>Hitelesítő alkalmazás kulcsának visszaállítása</PageTitle>
+
+<StatusMessage />
+<h3>Hitelesítő alkalmazás kulcsának visszaállítása</h3>
+<div class="alert alert-warning" role="alert">
+    <p>
+        <span class="glyphicon glyphicon-warning-sign"></span>
+        <strong>Ha visszaállítod a hitelesítő alkalmazásod kulcsát, az alkalmazás addig nem fog működni, amíg újra be nem állítod.</strong>
+    </p>
+    <p>
+        Ez a művelet kikapcsolja a kétlépcsős hitelesítést, amíg újra nem igazolod a hitelesítő alkalmazásod működését.
+        Ha nem fejezed be a hitelesítő alkalmazás beállítását, elveszítheted a hozzáférésedet a fiókodhoz.
+    </p>
+</div>
+<div>
+    <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
+        <AntiforgeryToken />
+        <button class="btn btn-danger" type="submit">Hitelesítő kulcs visszaállítása</button>
+    </form>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private async Task OnSubmitAsync()
+    {
+        var user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        await UserManager.SetTwoFactorEnabledAsync(user, false);
+        await UserManager.ResetAuthenticatorKeyAsync(user);
+        var userId = await UserManager.GetUserIdAsync(user);
+        Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó visszaállította a hitelesítő alkalmazás kulcsát.", userId);
+
+        await SignInManager.RefreshSignInAsync(user);
+
+        RedirectManager.RedirectToWithStatus(
+            "Account/Manage/EnableAuthenticator",
+            "A hitelesítő alkalmazás kulcsa visszaállításra került. Az új kulcs használatával újra be kell állítanod a hitelesítő alkalmazást.",
+            HttpContext);
+    }
+}

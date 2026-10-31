@@ -1,0 +1,143 @@
+@page "/issuetickets/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data.DTO
+@using PeKeyMngr.Models
+@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>IssueTicket</h2>
+<hr />
+@if (IssueTicket is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="IssueTicket" OnValidSubmit="UpdateIssueTicket" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="IssueTicket.TicketId" value="@IssueTicket.TicketId" />
+                <div class="mb-3">
+                    <label for="timestamp" class="form-label">Timestamp:</label>
+                    <InputDate id="timestamp" @bind-Value="IssueTicket.Timestamp" class="form-control" />
+                    <ValidationMessage For="() => IssueTicket.Timestamp" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="issuedescription" class="form-label">IssueDescription:</label>
+                    <InputText id="issuedescription" @bind-Value="IssueTicket.IssueDescription" class="form-control" />
+                    <ValidationMessage For="() => IssueTicket.IssueDescription" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="affectedroom" class="form-label">Affected Room:</label>
+                    <InputSelect id="affectedroom" @bind-Value="IssueTicket.AffectedRoom" class="form-control">
+                        @foreach (KeyValuePair<string, string> kvp in Rooms)
+                        {
+                            if (OriginalIssueTicket != null)
+                            {
+                                if(kvp.Key == OriginalIssueTicket.AffectedRoom.RoomId.ToString())
+                                {
+                                    <option value="@kvp.Key" selected>@kvp.Value</option>
+                                }
+                                else
+                                {
+                                    <option value="@kvp.Key">@kvp.Value</option>
+                                }
+                            }
+                            else
+                            {
+                                <option value="@kvp.Key">@kvp.Value</option>
+                            }
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => IssueTicket.AffectedRoom" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/issuetickets">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private Guid TicketId { get; set; }
+
+    private Dictionary<string, string> Rooms { get; set; } = new();
+    private IssueTicket? OriginalIssueTicket { get; set; }
+
+    [SupplyParameterFromForm]
+    private IssueTicketDto? IssueTicket { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        if (IssueTicket == null)
+        {
+            IssueTicket = new();
+            IssueTicket?.FromIssueTicket(await context.IssueTickets.Include(ticket => ticket.AffectedRoom).FirstOrDefaultAsync(m => m.TicketId == TicketId));
+        }
+        
+        OriginalIssueTicket ??= await context.IssueTickets.Include(ticket => ticket.AffectedRoom).FirstOrDefaultAsync(m => m.TicketId == TicketId);
+        Rooms = context.Rooms.ToDictionary(k => k.RoomId.ToString(), v => v.RoomName);
+
+        if (IssueTicket is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateIssueTicket()
+    {
+        using var context = DbFactory.CreateDbContext();
+        if (OriginalIssueTicket is null || IssueTicket is null)
+        {
+            return;
+        }
+        Room? AffRoom = context.Rooms.FirstOrDefault(r => r.RoomId.ToString() == IssueTicket.AffectedRoom);
+        if (AffRoom != null)
+        {
+            OriginalIssueTicket.AffectedRoom = AffRoom;
+        }
+        OriginalIssueTicket.Timestamp = IssueTicket.Timestamp;
+        OriginalIssueTicket.IssueDescription = IssueTicket.IssueDescription;
+        context.Attach(OriginalIssueTicket!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!IssueTicketExists(OriginalIssueTicket.TicketId))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/issuetickets");
+    }
+
+    private bool IssueTicketExists(Guid ticketid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.IssueTickets.Any(e => e.TicketId == ticketid);
+    }
+}

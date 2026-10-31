@@ -1,0 +1,234 @@
+﻿@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using PeKeyMngr.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Log in</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+
+        <div class="col-12 col-md-10 col-lg-9 col-xl-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+
+                <div class="row g-0">
+
+                    <!-- Bejelentkezés -->
+                    <div class="col-lg-12">
+                        <div class="card-body p-4 p-md-5">
+
+                            <div class="mb-4">
+                                <h1 class="fw-bold mb-2">Üdv újra!</h1>
+                                <p class="text-secondary mb-0">
+                                    Jelentkezz be a fiókodba a folytatáshoz.
+                                </p>
+                            </div>
+
+                            <StatusMessage Message="@errorMessage" />
+
+                            <EditForm EditContext="editContext"
+                                      method="post"
+                                      OnSubmit="LoginUser"
+                                      FormName="login">
+
+                                <DataAnnotationsValidator />
+
+                                <ValidationSummary class="text-danger" role="alert" />
+
+                                <!-- E-mail -->
+                                <div class="mb-3">
+                                    <label for="Input.Email" class="form-label fw-semibold">
+                                        E-mail
+                                    </label>
+
+                                    <InputText @bind-Value="Input.Email"
+                                               id="Input.Email"
+                                               class="form-control form-control-lg"
+                                               autocomplete="username webauthn"
+                                               aria-required="true"
+                                               placeholder="nev@example.com" />
+
+                                    <ValidationMessage For="() => Input.Email"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Jelszó -->
+                                <div class="mb-3">
+                                    <label for="Input.Password" class="form-label fw-semibold">
+                                        Jelszó
+                                    </label>
+
+                                    <InputText type="password"
+                                               @bind-Value="Input.Password"
+                                               id="Input.Password"
+                                               class="form-control form-control-lg"
+                                               autocomplete="current-password"
+                                               aria-required="true"
+                                               placeholder="Jelszó" />
+
+                                    <ValidationMessage For="() => Input.Password"
+                                                       class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Emlékezz rám -->
+                                <div class="form-check mb-4">
+                                    <InputCheckbox @bind-Value="Input.RememberMe"
+                                                   id="rememberMe"
+                                                   class="form-check-input" />
+
+                                    <label class="form-check-label" for="rememberMe">
+                                        Emlékezz rám
+                                    </label>
+                                </div>
+
+                                <!-- Bejelentkezés -->
+                                <button type="submit"
+                                        class="btn btn-primary btn-lg w-100">
+                                    Bejelentkezés
+                                </button>
+
+                                <!-- Passkey -->
+                                <div class="d-flex align-items-center my-4">
+                                    <hr class="flex-grow-1">
+                                    <span class="text-secondary small px-3">VAGY</span>
+                                    <hr class="flex-grow-1">
+                                </div>
+
+                                <PasskeySubmit Operation="PasskeyOperation.Request"
+                                               Name="Input.Passkey"
+                                               EmailName="Input.Email"
+                                               class="btn btn-outline-secondary btn-lg w-100">
+                                    Bejelentkezés passkey használatával
+                                </PasskeySubmit>
+
+                                <!-- Linkek -->
+                                <div class="text-center mt-4">
+
+                                    <div class="mb-2">
+                                        <a href="Account/ForgotPassword"
+                                           class="text-decoration-none">
+                                            Elfelejtetted a jelszavad?
+                                        </a>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
+                                           class="text-decoration-none">
+                                            Új felhasználói fiók létrehozása
+                                        </a>
+                                    </div>
+
+                                </div>
+
+                            </EditForm>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+    private EditContext editContext = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        editContext = new EditContext(Input);
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+        {
+            errorMessage = $"Error: {Input.Passkey.Error}";
+            return;
+        }
+
+        SignInResult result;
+        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+        {
+            // When performing passkey sign-in, don't perform form validation.
+            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+        }
+        else
+        {
+            // If doing a password sign-in, validate the form.
+            if (!editContext.Validate())
+            {
+                return;
+            }
+
+            // This doesn't count login failures towards account lockout
+            // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+            result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        }
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+
+        public PasskeyInputModel? Passkey { get; set; }
+    }
+}
