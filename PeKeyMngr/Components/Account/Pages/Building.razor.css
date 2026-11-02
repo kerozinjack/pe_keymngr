@@ -23,11 +23,64 @@
     color: #6c757d;
 }
 
+.room-search-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    max-width: 760px;
+    margin-top: 18px;
+}
+
+.room-search-field {
+    display: grid;
+    flex: 1;
+    gap: 6px;
+    min-width: 0;
+}
+
+.room-search-field label {
+    font-weight: 600;
+}
+
+.room-search-field input {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 2px solid #222;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font: inherit;
+}
+
+.availability-filter {
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 2px solid #222;
+    border-radius: 6px;
+    background: #fff;
+    color: #222;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.availability-filter.active {
+    background: #3b9723;
+    color: #fff;
+}
+
+.availability-filter:focus-visible,
+.room-search-field input:focus-visible {
+    outline: 3px solid #45a52b;
+    outline-offset: 2px;
+}
+
 .building-content {
     display: grid;
     grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
     gap: 40px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .building-section,
@@ -37,6 +90,12 @@
     border-radius: 12px;
     padding: 25px;
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.08);
+}
+
+.floor-section {
+    min-height: 0;
+    overflow-y: auto;
+    contain: size;
 }
 
 .building-section h3,
@@ -211,6 +270,17 @@
     text-align: center;
     color: #6c757d;
     font-weight: 500;
+}
+
+@media (max-width: 600px) {
+    .room-search-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .availability-filter {
+        width: 100%;
+    }
 }
 
 /* JELMAGYARÁZAT (Kártyásítva az oldal alján) */
