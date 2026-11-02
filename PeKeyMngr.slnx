@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="PeKeyMngr.csproj" />
+  <Project Path="PeKeyMngr.Tests/PeKeyMngr.Tests.csproj" />
+  <Project Path="PeKeyMngr/PeKeyMngr.csproj" />
 </Solution>
