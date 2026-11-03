@@ -9,23 +9,51 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Szerepkörök kezelése</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Szerepkörök kezelése</h1>
+            <p class="text-muted mb-0">A rendszerben elérhető szerepkörök áttekintése és kezelése.</p>
+        </div>
 
-<p>
-    <a href="roles/create">Create New</a>
-</p>
+        <a class="btn btn-primary" href="roles/create">
+            Új szerepkör
+        </a>
+    </div>
 
-<QuickGrid Class="table" Items="context.CustomRoles">
-    <PropertyColumn Property="role => role.RoleName" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h2 class="h5 mb-0">Nyilvántartott szerepkörök</h2>
+        </div>
 
-    <TemplateColumn Context="role">
-        <a href="@($"roles/edit?roleid={role.RoleId}")">Edit</a> |
-        <a href="@($"roles/details?roleid={role.RoleId}")">Details</a> |
-        <a href="@($"roles/delete?roleid={role.RoleId}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <QuickGrid Class="table table-hover align-middle mb-0" Items="context.CustomRoles">
+                    <PropertyColumn Property="role => role.RoleName" Title="Szerepkör neve" />
+
+                    <TemplateColumn Title="Műveletek" Context="role">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="@($"roles/edit?roleid={role.RoleId}")">
+                                Szerkesztés
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="@($"roles/details?roleid={role.RoleId}")">
+                                Részletek
+                            </a>
+                            <a class="btn btn-sm btn-outline-danger"
+                               href="@($"roles/delete?roleid={role.RoleId}")">
+                                Törlés
+                            </a>
+                        </div>
+                    </TemplateColumn>
+                </QuickGrid>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private ApplicationDbContext context = default!;

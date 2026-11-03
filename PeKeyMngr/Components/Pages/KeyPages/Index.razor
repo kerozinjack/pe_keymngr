@@ -10,24 +10,65 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Kulcsok kezelése</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <h3 class="mb-1">Kulcsok kezelése</h3>
+            <p class="text-muted mb-0">
+                A nyilvántartott kulcsok és azok hozzárendeléseinek kezelése.
+            </p>
+        </div>
 
-<p>
-    <a href="keys/create">Create New</a>
-</p>
+        <a href="keys/create" class="btn btn-primary">
+            Új kulcs
+        </a>
+    </div>
 
-<QuickGrid Class="table" Items="context.Keys">
-    <PropertyColumn Property="key => key.KeyName" />
-    <PropertyColumn Property="key => GetAssignedRooms(key.KeyId)" Title="Terem" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">Nyilvántartott kulcsok</h5>
+        </div>
 
-    <TemplateColumn Context="key">
-        <a href="@($"keys/edit?keyid={key.KeyId}")">Edit</a> |
-        <a href="@($"keys/details?keyid={key.KeyId}")">Details</a> |
-        <a href="@($"keys/delete?keyid={key.KeyId}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <QuickGrid TGridItem="Key"
+                           Class="table table-hover align-middle mb-0"
+                           Items="@context.Keys">
+
+                    <TemplateColumn Title="Kulcs neve" Context="key">
+                        @key.KeyName
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Hozzárendelt termek" Context="key">
+                        @GetAssignedRooms(key.KeyId)
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Műveletek" Context="key">
+                        <div class="d-flex gap-2">
+                            <a href="@($"keys/edit?keyid={key.KeyId}")"
+                               class="btn btn-sm btn-outline-primary">
+                                Szerkesztés
+                            </a>
+
+                            <a href="@($"keys/details?keyid={key.KeyId}")"
+                               class="btn btn-sm btn-outline-secondary">
+                                Részletek
+                            </a>
+
+                            <a href="@($"keys/delete?keyid={key.KeyId}")"
+                               class="btn btn-sm btn-outline-danger">
+                                Törlés
+                            </a>
+                        </div>
+                    </TemplateColumn>
+
+                </QuickGrid>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private ApplicationDbContext context = default!;
@@ -40,8 +81,8 @@
         {
             return "Nincs hozzárendelt szoba";
         }
-        
-        
+
+
         return string.Join(", ", x.AssignedRooms.Select(room => room.RoomName)).TrimEnd();
     }
 

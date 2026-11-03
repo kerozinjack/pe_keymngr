@@ -7,25 +7,42 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Felszerelés részletei</PageTitle>
 
-<h1>Details</h1>
+<div class="container py-4">
+    <div class="mb-4">
+        <h3 class="mb-1">Felszerelés részletei</h3>
+        <p class="text-muted mb-0">A kiválasztott felszerelés nyilvántartott adatai.</p>
+    </div>
 
-<div>
-    <h2>Equipment</h2>
-    <hr />
     @if (equipment is null)
     {
-        <p><em>Loading...</em></p>
+        <p><em>Betöltés...</em></p>
     }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">EquipmentName</dt>
-            <dd class="col-sm-10">@equipment.EquipmentName</dd>
-        </dl>
-        <div>
-            <a href="@($"/equipment/edit?equipmentid={equipment.EquipmentId}")">Edit</a> |
-            <a href="@($"/equipment")">Back to List</a>
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0">Felszerelés adatai</h5>
+                    </div>
+
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4 text-muted">Felszerelés neve</dt>
+                            <dd class="col-sm-8">@equipment.EquipmentName</dd>
+                        </dl>
+                    </div>
+
+                    <div class="card-footer bg-white d-flex justify-content-between gap-2">
+                        <a href="/equipment" class="btn btn-outline-secondary">Vissza a listához</a>
+                        <a href="@($"/equipment/edit?equipmentid={equipment.EquipmentId}")" class="btn btn-primary">
+                            Szerkesztés
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 </div>

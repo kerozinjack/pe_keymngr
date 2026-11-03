@@ -7,29 +7,100 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Kulcs részletei</PageTitle>
 
-<h1>Details</h1>
+<div class="container py-4">
+    <div class="mb-4">
+        <h3 class="mb-1">Kulcs részletei</h3>
+        <p class="text-muted mb-0">
+            A kiválasztott kulcs adatainak és hozzárendeléseinek megtekintése.
+        </p>
+    </div>
 
-<div>
-    <h2>Key</h2>
-    <hr />
     @if (key is null)
     {
-        <p><em>Loading...</em></p>
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Betöltés...</span>
+                </div>
+                <p class="text-muted mb-0">A kulcs adatainak betöltése...</p>
+            </div>
+        </div>
     }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">RoomName</dt>
-            <dd class="col-sm-10">@key.KeyName</dd>
-            <dt class="col-sm-2">Assigned Rooms</dt>
-            <dd class="col-sm-10">@GetAssignedRooms()</dd>
-            <dt class="col-sm-2">Required roles</dt>
-            <dd class="col-sm-10">@GetRequiredRoles()</dd>
-        </dl>
-        <div>
-            <a href="@($"/keys/edit?keyid={key.KeyId}")">Edit</a> |
-            <a href="@($"/keys")">Back to List</a>
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8 col-xl-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0">Kulcs információi</h5>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <div class="text-muted small mb-1">Kulcs neve</div>
+                            <div class="fw-semibold fs-5">@key.KeyName</div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="mb-4">
+                            <h6 class="fw-semibold mb-2">Hozzárendelt termek</h6>
+                            @{
+                                var assignedRooms = GetAssignedRooms();
+                            }
+
+                            @if (assignedRooms == "Nincs hozzárendelt terem")
+                            {
+                                <p class="text-muted mb-0">@assignedRooms</p>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var room in assignedRooms.Split(", "))
+                                    {
+                                        <span class="badge bg-light text-dark border">@room</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div>
+                            <h6 class="fw-semibold mb-2">Szükséges szerepkörök</h6>
+                            @{
+                                var requiredRoles = GetRequiredRoles();
+                            }
+
+                            @if (requiredRoles == "Nem igényel speciális jogosultságot")
+                            {
+                                <p class="text-muted mb-0">@requiredRoles</p>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var role in requiredRoles.Split(", "))
+                                    {
+                                        <span class="badge bg-light text-dark border">@role</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                        <a href="/keys" class="btn btn-outline-secondary">
+                            Vissza
+                        </a>
+
+                        <a href="@($"/keys/edit?keyid={key.KeyId}")" class="btn btn-primary">
+                            Szerkesztés
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -51,7 +122,7 @@
 
         return string.Join(", ", x.AssignedRooms.Select(room => room.RoomName)).TrimEnd();
     }
-    
+
     private string GetRequiredRoles()
     {
         using var context = DbFactory.CreateDbContext();

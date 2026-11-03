@@ -9,25 +9,55 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Karbantartási időszakok kezelése</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <h3 class="mb-1">Karbantartási időszakok kezelése</h3>
+            <p class="text-muted mb-0">
+                A karbantartás alatt álló termek és időszakok áttekintése.
+            </p>
+        </div>
 
-<p>
-    <a href="maintenancewindows/create">Create New</a>
-</p>
+        <a href="maintenancewindows/create" class="btn btn-primary">
+            Új karbantartási időszak
+        </a>
+    </div>
 
-<QuickGrid Class="table" Items="context.MaintenanceWindows">
-    <PropertyColumn Property="maintenancewindow => maintenancewindow.StartTime" />
-    <PropertyColumn Property="maintenancewindow => maintenancewindow.EndTime" />
-    <PropertyColumn Property="maintenanceWindow => GetAffectedRooms(maintenanceWindow.MaintenanceWindowId)" Title="Terem" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">Nyilvántartott karbantartások</h5>
+        </div>
 
-    <TemplateColumn Context="maintenancewindow">
-        <a href="@($"maintenancewindows/edit?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Edit</a> |
-        <a href="@($"maintenancewindows/details?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Details</a> |
-        <a href="@($"maintenancewindows/delete?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <QuickGrid Class="table table-hover align-middle mb-0" Items="context.MaintenanceWindows">
+                    <PropertyColumn Property="maintenancewindow => maintenancewindow.StartTime" Title="Kezdés" />
+                    <PropertyColumn Property="maintenancewindow => maintenancewindow.EndTime" Title="Befejezés" />
+                    <PropertyColumn Property="maintenanceWindow => GetAffectedRooms(maintenanceWindow.MaintenanceWindowId)" Title="Érintett termek" />
+
+                    <TemplateColumn Context="maintenancewindow" Title="Műveletek">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="@($"maintenancewindows/edit?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")"
+                               class="btn btn-sm btn-outline-primary">
+                                Szerkesztés
+                            </a>
+                            <a href="@($"maintenancewindows/details?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")"
+                               class="btn btn-sm btn-outline-secondary">
+                                Részletek
+                            </a>
+                            <a href="@($"maintenancewindows/delete?maintenancewindowid={maintenancewindow.MaintenanceWindowId}")"
+                               class="btn btn-sm btn-outline-danger">
+                                Törlés
+                            </a>
+                        </div>
+                    </TemplateColumn>
+                </QuickGrid>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private ApplicationDbContext context = default!;

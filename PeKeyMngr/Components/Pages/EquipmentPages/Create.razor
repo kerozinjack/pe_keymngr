@@ -7,29 +7,41 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Új felszerelés</PageTitle>
 
-<h1>Create</h1>
-
-<h2>Equipment</h2>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Equipment" OnValidSubmit="AddEquipment" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="mb-3">
-                <label for="equipmentname" class="form-label">EquipmentName:</label> 
-                <InputText id="equipmentname" @bind-Value="Equipment.EquipmentName" class="form-control" /> 
-                <ValidationMessage For="() => Equipment.EquipmentName" class="text-danger" /> 
-            </div>        
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
+<div class="container py-4">
+    <div class="mb-4">
+        <h3 class="mb-1">Új felszerelés hozzáadása</h3>
+        <p class="text-muted mb-0">Új felszerelés felvétele a rendszer nyilvántartásába.</p>
     </div>
-</div>
 
-<div>
-    <a href="/equipment">Back to List</a>
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0">Felszerelés adatai</h5>
+                </div>
+
+                <div class="card-body">
+                    <EditForm method="post" Model="Equipment" OnValidSubmit="AddEquipment" FormName="create" Enhance>
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" role="alert" />
+
+                        <div class="mb-3">
+                            <label for="equipmentname" class="form-label">Felszerelés neve</label>
+                            <InputText id="equipmentname" @bind-Value="Equipment.EquipmentName" class="form-control" />
+                            <ValidationMessage For="() => Equipment.EquipmentName" class="text-danger" />
+                        </div>
+
+                        <div class="d-flex justify-content-between gap-2 mt-4">
+                            <a href="/equipment" class="btn btn-outline-secondary">Vissza a listához</a>
+                            <button type="submit" class="btn btn-primary">Felszerelés létrehozása</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {

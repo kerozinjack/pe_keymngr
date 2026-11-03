@@ -9,26 +9,62 @@
 
 @attribute [Authorize]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Hibajegyek kezelése</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <h3 class="mb-1">Hibajegyek kezelése</h3>
+            <p class="text-muted mb-0">
+                A bejelentett hibák és az érintett termek nyilvántartása.
+            </p>
+        </div>
 
-<p>
-    <a href="issuetickets/create">Create New</a>
-</p>
+        <a href="issuetickets/create" class="btn btn-primary">
+            Új hibajegy
+        </a>
+    </div>
 
-<QuickGrid Class="table" Items="context.IssueTickets.Include(ticket=>ticket.ReportedBy).Include(ticket=>ticket.AffectedRoom)">
-    <PropertyColumn Property="issueticket => issueticket.Timestamp" />
-    <PropertyColumn Property="issueticket => issueticket.AffectedRoom.RoomName" />
-    <PropertyColumn Property="issueticket => issueticket.IssueDescription" />
-    <PropertyColumn Property="issueticket => issueticket.ReportedBy.UserName" Title="Reported by" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">Nyilvántartott hibajegyek</h5>
+        </div>
 
-    <TemplateColumn Context="issueticket">
-        <a href="@($"issuetickets/edit?ticketid={issueticket.TicketId}")">Edit</a> |
-        <a href="@($"issuetickets/details?ticketid={issueticket.TicketId}")">Details</a> |
-        <a href="@($"issuetickets/delete?ticketid={issueticket.TicketId}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <QuickGrid TGridItem="IssueTicket"
+                           Class="table table-hover align-middle mb-0"
+                           Items="context.IssueTickets.Include(ticket => ticket.ReportedBy).Include(ticket => ticket.AffectedRoom)">
+
+                    <PropertyColumn Property="issueticket => issueticket.Timestamp" Title="Bejelentés időpontja" />
+                    <PropertyColumn Property="issueticket => issueticket.AffectedRoom.RoomName" Title="Érintett terem" />
+                    <PropertyColumn Property="issueticket => issueticket.IssueDescription" Title="Hiba leírása" />
+                    <PropertyColumn Property="issueticket => issueticket.ReportedBy.UserName" Title="Bejelentő" />
+
+                    <TemplateColumn Context="issueticket" Title="Műveletek">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="@($"issuetickets/edit?ticketid={issueticket.TicketId}")"
+                               class="btn btn-sm btn-outline-primary">
+                                Szerkesztés
+                            </a>
+
+                            <a href="@($"issuetickets/details?ticketid={issueticket.TicketId}")"
+                               class="btn btn-sm btn-outline-secondary">
+                                Részletek
+                            </a>
+
+                            <a href="@($"issuetickets/delete?ticketid={issueticket.TicketId}")"
+                               class="btn btn-sm btn-outline-danger">
+                                Törlés
+                            </a>
+                        </div>
+                    </TemplateColumn>
+
+                </QuickGrid>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private ApplicationDbContext context = default!;

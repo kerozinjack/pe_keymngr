@@ -11,15 +11,33 @@ namespace PeKeyMngr.Data.DTO
 
         public IssueTicket? ToIssueTicket(ApplicationUser user, ApplicationDbContext ctx)
         {
-            Console.WriteLine(AffectedRoom);
-            Room? room = ctx.Rooms.FirstOrDefault(r => r.RoomId.ToString() == AffectedRoom.ToUpper());
+            Console.WriteLine($"AffectedRoom: '{AffectedRoom}'");
+            Console.WriteLine($"Is valid GUID: {Guid.TryParse(AffectedRoom, out Guid roomId)}");
+
+            List<Room> allRooms = ctx.Rooms.ToList();
+
+            Console.WriteLine($"Rooms count: {allRooms.Count}");
+
+            foreach (Room r in allRooms)
+            {
+                Console.WriteLine($"Room: {r.RoomName}, ID: {r.RoomId}");
+            }
+
+            Room? room = ctx.Rooms.FirstOrDefault(r => r.RoomId == roomId);
+
+            Console.WriteLine($"Found room: {room != null}");
+
             if (room == null)
             {
                 return null;
             }
+
             return new IssueTicket
             {
-                Timestamp = Timestamp, ReportedBy = user, AffectedRoom = room, IssueDescription = IssueDescription
+                Timestamp = Timestamp,
+                ReportedBy = user,
+                AffectedRoom = room,
+                IssueDescription = IssueDescription
             };
         }
 

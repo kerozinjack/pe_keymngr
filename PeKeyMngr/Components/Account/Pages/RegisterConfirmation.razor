@@ -12,23 +12,46 @@
 
 <PageTitle>Regisztráció megerősítése</PageTitle>
 
-<h1>Regisztráció megerősítése</h1>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-md-5 text-center">
 
-<StatusMessage Message="@statusMessage" />
+                    <h1 class="h3 mb-3">Regisztráció megerősítése</h1>
 
-@if (emailConfirmationLink is not null)
-{
-    <p>
-        Az alkalmazásban jelenleg nincs valódi e-mail-küldő beállítva. A valódi e-mail-küldő konfigurálásáról
-        <a href="https://aka.ms/aspaccountconf">ebben az útmutatóban</a> olvashatsz.
-        Normál esetben ezt a hivatkozást e-mailben küldenénk el:
-        <a href="@emailConfirmationLink">Kattints ide a fiókod megerősítéséhez</a>.
-    </p>
-}
-else
-{
-    <p role="alert">A fiókod megerősítéséhez ellenőrizd az e-mail-fiókodat.</p>
-}
+                    <StatusMessage Message="@statusMessage" />
+
+                    @if (emailConfirmationLink is not null)
+                    {
+                        <p class="text-muted mb-4">
+                            Az alkalmazásban jelenleg nincs valódi e-mail-küldő beállítva.
+                            A valódi e-mail-küldő konfigurálásáról
+                            <a href="https://aka.ms/aspaccountconf">ebben az útmutatóban</a>
+                            olvashatsz.
+                        </p>
+
+                        <p class="mb-4">
+                            Normál esetben a megerősítő hivatkozást e-mailben küldenénk el.
+                        </p>
+
+                        <a class="btn btn-primary"
+                           href="@emailConfirmationLink">
+                            Fiók megerősítése
+                        </a>
+                    }
+                    else
+                    {
+                        <p class="alert alert-info mt-3 mb-0" role="alert">
+                            A fiókod megerősítéséhez ellenőrizd az e-mail-fiókodat.
+                        </p>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private string? emailConfirmationLink;

@@ -9,27 +9,61 @@
 
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Termek kezelése</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Termek kezelése</h1>
+            <p class="text-muted mb-0">Az épület termeinek és felszereltségének áttekintése.</p>
+        </div>
 
-<p>
-    <a href="rooms/create">Create New</a>
-</p>
+        <a class="btn btn-primary" href="rooms/create">
+            <i class="bi bi-plus-lg me-2"></i>
+            Új terem
+        </a>
+    </div>
 
-<QuickGrid Class="table" Items="context.Rooms">
-    <PropertyColumn Property="room => room.RoomName" />
-    <PropertyColumn Property="room => room.Building" />
-    <PropertyColumn Property="room => room.Floor" />
-    <PropertyColumn Property="room => room.Capacity" />
-    <PropertyColumn Property="room => GetEquipsments(room.RoomId)" Title="Equipments" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+            <h2 class="h5 mb-0">Nyilvántartott termek</h2>
+        </div>
 
-    <TemplateColumn Context="room">
-        <a href="@($"rooms/edit?roomid={room.RoomId}")">Edit</a> |
-        <a href="@($"rooms/details?roomid={room.RoomId}")">Details</a> |
-        <a href="@($"rooms/delete?roomid={room.RoomId}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <QuickGrid Class="table table-hover align-middle mb-0" Items="context.Rooms">
+                    <PropertyColumn Property="room => room.RoomName" Title="Terem neve" />
+                    <PropertyColumn Property="room => room.Building" Title="Épület" />
+                    <PropertyColumn Property="room => room.Floor" Title="Emelet" />
+                    <PropertyColumn Property="room => room.Capacity" Title="Férőhely" />
+
+                    <TemplateColumn Title="Felszereltség" Context="room">
+                        <span class="text-muted small">
+                            @GetEquipsments(room.RoomId)
+                        </span>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Műveletek" Context="room">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="@($"rooms/edit?roomid={room.RoomId}")">
+                                Szerkesztés
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="@($"rooms/details?roomid={room.RoomId}")">
+                                Részletek
+                            </a>
+                            <a class="btn btn-sm btn-outline-danger"
+                               href="@($"rooms/delete?roomid={room.RoomId}")">
+                                Törlés
+                            </a>
+                        </div>
+                    </TemplateColumn>
+                </QuickGrid>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private ApplicationDbContext context = default!;
