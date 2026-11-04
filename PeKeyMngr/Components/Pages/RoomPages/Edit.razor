@@ -8,60 +8,108 @@
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 @rendermode InteractiveServer
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Terem szerkesztése</PageTitle>
 
-<h1>Edit</h1>
-
-<h2>Room</h2>
-<hr />
-@if (Room is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Room" OnValidSubmit="UpdateRoom" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="Room.RoomId" value="@Room.RoomId" />
-                <div class="mb-3">
-                    <label for="roomname" class="form-label">RoomName:</label>
-                    <InputText id="roomname" @bind-Value="Room.RoomName" class="form-control" />
-                    <ValidationMessage For="() => Room.RoomName" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="building" class="form-label">Building:</label>
-                    <InputText id="building" @bind-Value="Room.Building" class="form-control" />
-                    <ValidationMessage For="() => Room.Building" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="floor" class="form-label">Floor:</label>
-                    <InputText id="floor" @bind-Value="Room.Floor" class="form-control" />
-                    <ValidationMessage For="() => Room.Floor" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="capacity" class="form-label">Capacity:</label>
-                    <InputNumber id="capacity" @bind-Value="Room.Capacity" class="form-control" />
-                    <ValidationMessage For="() => Room.Capacity" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <h3>Equipments</h3>
-                    @foreach (KeyValuePair<Guid, string> kvp in GetEquipments())
-                    {
-                        <label for="@kvp.Key">@kvp.Value</label>
-                        <input type="checkbox" id="@kvp.Key" @onchange="args => ToggleEquipment(kvp.Key, args)" checked="@IsEquippedWith(kvp.Key)"/>
-                    }
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
-        </div>
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Terem szerkesztése</h1>
+        <p class="text-muted mb-0">Módosítsd a terem adatait és a hozzá tartozó felszereléseket.</p>
     </div>
-}
 
-<div>
-    <a href="/rooms">Back to List</a>
+    @if (Room is null)
+    {
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Betöltés...</span>
+                </div>
+                <p class="text-muted mb-0">A terem adatainak betöltése...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8 col-xl-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light py-3">
+                        <h2 class="h5 mb-0">Terem adatai</h2>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <EditForm method="post" Model="Room" OnValidSubmit="UpdateRoom" FormName="edit" Enhance>
+                            <DataAnnotationsValidator />
+
+                            <input type="hidden" name="Room.RoomId" value="@Room.RoomId" />
+
+                            <div class="mb-4">
+                                <div class="mb-3">
+                                    <label for="roomname" class="form-label fw-semibold">Terem neve</label>
+                                    <InputText id="roomname" @bind-Value="Room.RoomName" class="form-control" />
+                                    <ValidationMessage For="() => Room.RoomName" class="text-danger small" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="building" class="form-label fw-semibold">Épület</label>
+                                    <InputText id="building" @bind-Value="Room.Building" class="form-control" />
+                                    <ValidationMessage For="() => Room.Building" class="text-danger small" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="floor" class="form-label fw-semibold">Emelet</label>
+                                    <InputText id="floor" @bind-Value="Room.Floor" class="form-control" />
+                                    <ValidationMessage For="() => Room.Floor" class="text-danger small" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="capacity" class="form-label fw-semibold">Férőhelyek száma</label>
+                                    <InputNumber id="capacity" @bind-Value="Room.Capacity" class="form-control" />
+                                    <ValidationMessage For="() => Room.Capacity" class="text-danger small" />
+                                </div>
+                            </div>
+
+                            <div class="border-top pt-4 mb-4">
+                                <h2 class="h5 mb-2">Felszerelések</h2>
+                                <p class="text-muted small mb-3">
+                                    Jelöld be azokat a felszereléseket, amelyek a teremhez tartoznak.
+                                </p>
+
+                                <div class="row g-2">
+                                    @foreach (KeyValuePair<Guid, string> kvp in GetEquipments())
+                                    {
+                                        <div class="col-12 col-sm-6">
+                                            <div class="form-check border rounded p-3 ps-5 h-100">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       id="@kvp.Key"
+                                                       @onchange="args => ToggleEquipment(kvp.Key, args)"
+                                                       checked="@IsEquippedWith(kvp.Key)" />
+                                                <label class="form-check-label" for="@kvp.Key">
+                                                    @kvp.Value
+                                                </label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3 border-top">
+                                <a href="/rooms" class="btn btn-outline-secondary">
+                                    Vissza a termekhez
+                                </a>
+
+                                <button type="submit" class="btn btn-primary px-4">
+                                    Módosítások mentése
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -94,7 +142,7 @@ else
             Equipments = Equipments.FindAll(e=>e.EquipmentId !=  equipmentId);
         }
     }
-    
+
     public bool IsEquippedWith(Guid equipmentId)
     {
         using var context = DbFactory.CreateDbContext();
@@ -128,7 +176,7 @@ else
     private async Task UpdateRoom()
     {
         using var context = DbFactory.CreateDbContext();
-        
+
         context.Attach(Room!).State = EntityState.Modified;
         Room!.Equipments.Clear();
         foreach (Equipment equipment in Equipments)

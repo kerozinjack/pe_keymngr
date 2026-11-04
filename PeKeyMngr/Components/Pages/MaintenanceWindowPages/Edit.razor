@@ -8,49 +8,106 @@
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 @rendermode InteractiveServer
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Karbantartási időszak szerkesztése</PageTitle>
 
-<h1>Edit</h1>
-
-<h2>MaintenanceWindow</h2>
-<hr />
-@if (MaintenanceWindow is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="MaintenanceWindow" OnValidSubmit="UpdateMaintenanceWindow" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="MaintenanceWindow.MaintenanceWindowId" value="@MaintenanceWindow.MaintenanceWindowId" />
-                <div class="mb-3">
-                    <label for="starttime" class="form-label">StartTime:</label>
-                    <InputDate id="starttime" @bind-Value="MaintenanceWindow.StartTime" class="form-control" />
-                    <ValidationMessage For="() => MaintenanceWindow.StartTime" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="endtime" class="form-label">EndTime:</label>
-                    <InputDate id="endtime" @bind-Value="MaintenanceWindow.EndTime" class="form-control" />
-                    <ValidationMessage For="() => MaintenanceWindow.EndTime" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    @foreach (KeyValuePair<Guid, string> kvp in GetRooms())
-                    {
-                        <label for="@kvp.Key">@kvp.Value</label>
-                        <input type="checkbox" @onchange="args => ToggleRoom(kvp.Key, args)" checked="@IsAffectedRoom(kvp.Key)" />
-                    }
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
-        </div>
+<div class="container py-4">
+    <div class="mb-4">
+        <h3 class="mb-1">Karbantartási időszak szerkesztése</h3>
+        <p class="text-muted mb-0">
+            A karbantartási időszak adatainak és az érintett termek módosítása.
+        </p>
     </div>
-}
 
-<div>
-    <a href="/maintenancewindows">Back to List</a>
+    @if (MaintenanceWindow is null)
+    {
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Betöltés...</span>
+                </div>
+                <p class="text-muted mb-0">A karbantartási időszak adatainak betöltése...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-9 col-xl-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0">Karbantartási adatok</h5>
+                    </div>
+
+                    <EditForm method="post" Model="MaintenanceWindow" OnValidSubmit="UpdateMaintenanceWindow" FormName="edit" Enhance>
+                        <DataAnnotationsValidator />
+
+                        <input type="hidden" name="MaintenanceWindow.MaintenanceWindowId" value="@MaintenanceWindow.MaintenanceWindowId" />
+
+                        <div class="card-body p-4">
+                            <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="starttime" class="form-label">Kezdés dátuma</label>
+                                    <InputDate id="starttime"
+                                               @bind-Value="MaintenanceWindow.StartTime"
+                                               class="form-control" />
+                                    <ValidationMessage For="() => MaintenanceWindow.StartTime" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="endtime" class="form-label">Befejezés dátuma</label>
+                                    <InputDate id="endtime"
+                                               @bind-Value="MaintenanceWindow.EndTime"
+                                               class="form-control" />
+                                    <ValidationMessage For="() => MaintenanceWindow.EndTime" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <hr class="my-4" />
+
+                            <div class="mb-3">
+                                <h6 class="mb-1">Érintett termek</h6>
+                                <p class="text-muted small mb-3">
+                                    Válaszd ki azokat a termeket, amelyekre a karbantartás vonatkozik.
+                                </p>
+
+                                <div class="row g-2">
+                                    @foreach (KeyValuePair<Guid, string> kvp in GetRooms())
+                                    {
+                                        <div class="col-12 col-sm-6 col-md-4">
+                                            <div class="form-check border rounded p-3 h-100">
+                                                <input type="checkbox"
+                                                       class="form-check-input"
+                                                       id="@kvp.Key"
+                                                       @onchange="args => ToggleRoom(kvp.Key, args)"
+                                                       checked="@IsAffectedRoom(kvp.Key)" />
+                                                <label class="form-check-label ms-2" for="@kvp.Key">
+                                                    @kvp.Value
+                                                </label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                            <a href="/maintenancewindows" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Vissza a listához
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>
+                                Módosítások mentése
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -65,7 +122,7 @@ else
     private Dictionary<Guid, string> GetRooms()
     {
         using var context = DbFactory.CreateDbContext();
-        
+
         if (MaintenanceWindow is null)
         {
             return new();
@@ -82,7 +139,7 @@ else
         using var context = DbFactory.CreateDbContext();
         return context.MaintenanceWindows.Include(mw => mw.AffectedRooms).Where(mw => mw.MaintenanceWindowId == MaintenanceWindowId).SelectMany(mw => mw.AffectedRooms).Any(r => r.RoomId == roomId);
     }
-    
+
     private void ToggleRoom(Guid roomId, ChangeEventArgs args)
     {
         using var context = DbFactory.CreateDbContext();
@@ -128,7 +185,7 @@ else
             NavigationManager.NotFound();
             return;
         }
-        
+
         context.Attach(mw).State = EntityState.Modified;
         mw.AffectedRooms.Clear();
         foreach (Room room in AffRooms)
@@ -136,7 +193,7 @@ else
             context.Attach(room).State = EntityState.Unchanged;
             mw.AffectedRooms.Add(room);
         }
-        
+
 
         try
         {

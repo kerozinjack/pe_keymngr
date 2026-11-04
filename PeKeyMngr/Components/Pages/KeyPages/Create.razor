@@ -9,57 +9,109 @@
 @attribute [Authorize(Policy = "CanAccessAdminPages")]
 @rendermode InteractiveServer
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Új kulcs létrehozása</PageTitle>
 
-<h1>Create</h1>
-
-<h2>Key</h2>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Key" OnValidSubmit="AddKey" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="mb-3">
-                <label for="roomname" class="form-label">RoomName:</label> 
-                <InputText id="roomname" @bind-Value="Key.KeyName" class="form-control" /> 
-                <ValidationMessage For="() => Key.KeyName" class="text-danger" /> 
-            </div>
-            <div class="mb-3">
-                <p>Assigned Rooms</p>
-
-
-                @foreach (KeyValuePair<string, string> kvp in Rooms)
-                {
-                    @if (kvp.Key is not null && kvp.Value is not null && Key.AssignedRoomIds is not null)
-                    {
-                        <input type="checkbox" id="@kvp.Key"
-                               checked="@Key.AssignedRoomIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
-                               @onchange="e => ToggleRoom(kvp.Key, e)"/>
-                        <label for="@kvp.Key">@kvp.Value</label>
-                    }
-                }
-            </div>
-            <div class="mb-3">
-                <p>Required Roles</p>
-                @foreach (KeyValuePair<string, string> kvp in RequiredRoles)
-                {
-                    @if (kvp.Key is not null && kvp.Value is not null && Key.RequiredRoleIds is not null)
-                    {
-                        <input type="checkbox" id="@kvp.Key"
-                               checked="@Key.RequiredRoleIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
-                               @onchange="e => ToggleRole(kvp.Key, e)"/>
-                        <label for="@kvp.Key">@kvp.Value</label>
-                    }
-                }
-            </div>
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
+<div class="container py-4">
+    <div class="mb-4">
+        <h3 class="mb-1">Új kulcs létrehozása</h3>
+        <p class="text-muted mb-0">
+            Új kulcs rögzítése, a hozzá tartozó termek és a szükséges jogosultságok megadásával.
+        </p>
     </div>
-</div>
 
-<div>
-    <a href="/keys">Back to List</a>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0">Kulcs adatai</h5>
+                </div>
+
+                <EditForm method="post" Model="Key" OnValidSubmit="AddKey" FormName="create" Enhance>
+                    <DataAnnotationsValidator />
+
+                    <div class="card-body p-4">
+                        <ValidationSummary class="text-danger mb-3" role="alert" />
+
+                        <div class="mb-4">
+                            <label for="roomname" class="form-label fw-semibold">
+                                Kulcs neve
+                            </label>
+                            <InputText id="roomname"
+                                       @bind-Value="Key.KeyName"
+                                       class="form-control" />
+                            <ValidationMessage For="() => Key.KeyName" class="text-danger" />
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="mb-4">
+                            <h6 class="fw-semibold mb-1">Hozzárendelt termek</h6>
+                            <p class="text-muted small mb-3">
+                                Válaszd ki, mely termekhez tartozzon ez a kulcs.
+                            </p>
+
+                            <div class="border rounded p-3">
+                                @foreach (KeyValuePair<string, string> kvp in Rooms)
+                                {
+                                    @if (kvp.Key is not null && kvp.Value is not null && Key.AssignedRoomIds is not null)
+                                    {
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   id="@kvp.Key"
+                                                   checked="@Key.AssignedRoomIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                                                   @onchange="e => ToggleRoom(kvp.Key, e)" />
+                                            <label for="@kvp.Key" class="form-check-label">
+                                                @kvp.Value
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="mb-2">
+                            <h6 class="fw-semibold mb-1">Szükséges szerepkörök</h6>
+                            <p class="text-muted small mb-3">
+                                Válaszd ki, mely szerepkörökkel rendelkező felhasználók jogosultak a kulcs használatára.
+                            </p>
+
+                            <div class="border rounded p-3">
+                                @foreach (KeyValuePair<string, string> kvp in RequiredRoles)
+                                {
+                                    @if (kvp.Key is not null && kvp.Value is not null && Key.RequiredRoleIds is not null)
+                                    {
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   id="@kvp.Key"
+                                                   checked="@Key.RequiredRoleIds.Any(x => x.ToString("D").ToLowerInvariant() == kvp.Key)"
+                                                   @onchange="e => ToggleRole(kvp.Key, e)" />
+                                            <label for="@kvp.Key" class="form-check-label">
+                                                @kvp.Value
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                        <a href="/keys" class="btn btn-outline-secondary">
+                            Vissza
+                        </a>
+
+                        <button type="submit" class="btn btn-primary">
+                            Kulcs létrehozása
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -82,7 +134,7 @@
             Key.AssignedRoomIds.Remove(Guid.Parse(roomId));
         }
     }
-    
+
     private void ToggleRole(string roleId, ChangeEventArgs e)
     {
         if (e.Value is bool and true)
@@ -128,7 +180,7 @@
             }
             key.AssignedRooms.Add(tmp);
         }
-        
+
         foreach (Guid guid in Key.RequiredRoleIds)
         {
             Role? tmp = context.CustomRoles.FirstOrDefault(role => role.RoleId == guid);
@@ -138,7 +190,7 @@
             }
             key.RequiredRoles.Add(tmp);
         }
-        
+
         context.Keys.Add(key);
         await context.SaveChangesAsync();
         NavigationManager.NavigateTo("/keys");
