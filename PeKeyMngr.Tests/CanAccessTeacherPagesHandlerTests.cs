@@ -10,38 +10,43 @@ using System.Security.Claims;
 
 namespace PeKeyMngr.Tests
 {
-    public class CanAccessTeacherPagesHandlerTests
+    public class CanAccessTeacherPagesHandlerTests: IClassFixture<AuthorizationTestFixture>
     {
-        private readonly Mock<IUserStore<ApplicationUser>> _userStore;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly CanAccessTeacherPagesHandler _handler;
+        private readonly AuthorizationTestFixture _fixture;
 
-        public CanAccessTeacherPagesHandlerTests()
+        public CanAccessTeacherPagesHandlerTests(AuthorizationTestFixture fixture)
         {
-            _userStore = new Mock<IUserStore<ApplicationUser>>();
-            _userManager = new UserManager<ApplicationUser>(
-                _userStore.Object,
-                Options.Create(new IdentityOptions()),
-                Mock.Of<IPasswordHasher<ApplicationUser>>(),
-                Array.Empty<IUserValidator<ApplicationUser>>(),
-                Array.Empty<IPasswordValidator<ApplicationUser>>(),
-                Mock.Of<ILookupNormalizer>(),
-                Mock.Of<IdentityErrorDescriber>(),
-                Mock.Of<IServiceProvider>(),
-                Mock.Of<ILogger<UserManager<ApplicationUser>>>());
-            
-            _handler = new CanAccessTeacherPagesHandler(_userManager);
+            _fixture = fixture;
         }
 
         [Fact]
         public async Task UserWithPermission_ShouldBeAuthorized()
         {
-            ApplicationUser user = new ApplicationUser { Id = "123", EmailConfirmed = true, Roles = new() };
+            ApplicationUser user = new ApplicationUser { UserName = "teacherWithRole", Email = "teacherWithRole@example.com", EmailConfirmed = true, Roles = new() };
             user.Roles.Add(new Role{RoleId = Guid.NewGuid(), RoleName = "teacher"});
-            _userStore.Setup(x => x.FindByIdAsync("123", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+            await _fixture.UserManager.CreateAsync(user, "1Q2w3e4r.");
 
-            AuthorizationHandlerContext context = CreateAuthorizationContext("123");
-            await _handler.HandleAsync(context);
+            ClaimsPrincipal principal = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id)
+                    },
+                    "TestAuthentication"
+                )
+            );
+
+            CanAccessTeacherPages requirement = new CanAccessTeacherPages();
+
+            AuthorizationHandlerContext context = new AuthorizationHandlerContext(
+                new[] { requirement },
+                principal,
+                null
+            );
+
+            CanAccessTeacherPagesHandler handler = new CanAccessTeacherPagesHandler(_fixture.UserManager);
+
+            await handler.HandleAsync(context);
 
             Assert.True(context.HasSucceeded);
         }
@@ -49,26 +54,32 @@ namespace PeKeyMngr.Tests
         [Fact]
         public async Task UserWithoutPermission_ShouldBeNotAuthorized()
         {
-            ApplicationUser user = new ApplicationUser { Id = "123", EmailConfirmed = true, Roles = new() };
-            _userStore.Setup(x => x.FindByIdAsync("123", It.IsAny<CancellationToken>())).ReturnsAsync(user);
+            ApplicationUser user = new ApplicationUser { UserName = "teacherWithoutRole", Email = "teacherWithoutRole@example.com", EmailConfirmed = true, Roles = new() };
+            await _fixture.UserManager.CreateAsync(user, "1Q2w3e4r.");
 
-            AuthorizationHandlerContext context = CreateAuthorizationContext("123");
-            await _handler.HandleAsync(context);
+            ClaimsPrincipal principal = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id)
+                    },
+                    "TestAuthentication"
+                )
+            );
 
-            Assert.False(context.HasSucceeded);
-        }
+            CanAccessTeacherPages requirement = new CanAccessTeacherPages();
 
-        private AuthorizationHandlerContext CreateAuthorizationContext(string id)
-        {
-            Claim[] claims = new[] { new Claim(ClaimTypes.NameIdentifier, id) };
-            ClaimsIdentity identity = new ClaimsIdentity(claims, "Test");
-            ClaimsPrincipal principal = new ClaimsPrincipal(identity);
-
-            return new AuthorizationHandlerContext(
-                new[] { new CanAccessTeacherPages() },
+            AuthorizationHandlerContext context = new AuthorizationHandlerContext(
+                new[] { requirement },
                 principal,
                 null
             );
+
+            CanAccessTeacherPagesHandler handler = new CanAccessTeacherPagesHandler(_fixture.UserManager);
+
+            await handler.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
         }
     }
 }
