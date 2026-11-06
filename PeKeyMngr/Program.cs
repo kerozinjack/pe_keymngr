@@ -50,7 +50,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CanAccessAdminPages());
     });
-    options.AddPolicy("CanTeacherAdminPages", policy =>
+    options.AddPolicy("CanAccessTeacherPages", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CanAccessTeacherPages());
@@ -86,9 +86,11 @@ using (IServiceScope? scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
+    await Seeder.SeedAsync(app.Services);
 }
 else
 {
+    await Seeder.SeedUsersAsync(app.Services);
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
