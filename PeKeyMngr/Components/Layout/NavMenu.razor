@@ -55,7 +55,7 @@
                     </Authorized>
                 </AuthorizeView>
                 @* Only users with the Teacher role can see these menu items *@
-                <AuthorizeView Policy="CanTeacherAdminPages" Context="teacherContext">
+                <AuthorizeView Policy="CanAccessTeacherPages" Context="teacherContext">
                     <Authorized>
                         <div class="nav-item px-3">
                             <span class="nav-link text-uppercase small fw-bold">Oktatói funkciók</span>
@@ -100,7 +100,7 @@
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link text-danger">
+                        <button type="submit" class="nav-link">
                             <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Kijelentkezés
                         </button>
                     </form>
