@@ -107,7 +107,7 @@ customElements.define('passkey-submit', class extends HTMLElement {
                 return;
             }
             const errorMessage = error.name === 'NotAllowedError'
-                ? 'No passkey was provided by the authenticator.'
+                ? 'A hitelesítő eszköz nem adott át passkey-t.'
                 : error.message;
             formData.append(`${this.attrs.name}.Error`, errorMessage);
         }

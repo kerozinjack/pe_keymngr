@@ -1,4 +1,4 @@
-﻿@page "/Account/ExternalLogin"
+@page "/Account/ExternalLogin"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Security.Claims
@@ -20,13 +20,13 @@
 
 <StatusMessage Message="@message" />
 <h1>Regisztráció</h1>
-<h2>A(z) @ProviderDisplayName fiókod összekapcsolása</h2>
+<h2>Kapcsolja össze a(z) @ProviderDisplayName szolgáltatónál használt fiókját.</h2>
 <hr />
 
 <div class="alert alert-info">
-    Sikeresen hitelesítetted magad a(z) <strong>@ProviderDisplayName</strong> szolgáltatóval.
-    A bejelentkezés befejezéséhez add meg az alábbi mezőben az ezen az oldalon használni kívánt e-mail-címedet,
-    majd kattints a Regisztráció gombra.
+    Sikeresen hitelesítette magát a(z) <strong>@ProviderDisplayName</strong> szolgáltatóval.
+    A bejelentkezés befejezéséhez adja meg az alábbi mezőben az ezen az oldalon használni kívánt e-mail-címét,
+    majd kattintson a Regisztráció gombra.
 </div>
 
 <div class="row">
@@ -35,7 +35,7 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Add meg az e-mail-címedet." />
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Adja meg az e-mail-címét." />
                 <label for="Input.Email" class="form-label">E-mail-cím</label>
                 <ValidationMessage For="() => Input.Email" />
             </div>
@@ -211,7 +211,7 @@
     private sealed class InputModel
     {
         [Required]
-        [EmailAddress]
+        [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
         public string Email { get; set; } = "";
     }
 }

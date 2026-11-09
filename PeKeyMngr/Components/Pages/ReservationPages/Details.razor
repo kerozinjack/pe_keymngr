@@ -7,27 +7,27 @@
 
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Részletek</PageTitle>
 
-<h1>Details</h1>
+<h1>Részletek</h1>
 
 <div>
-    <h2>Reservation</h2>
+    <h2>Foglalás</h2>
     <hr />
     @if (reservation is null)
     {
-        <p><em>Loading...</em></p>
+        <p><em>Betöltés...</em></p>
     }
     else {
         <dl class="row">
-            <dt class="col-sm-2">StartTime</dt>
+            <dt class="col-sm-2">Kezdés időpontja</dt>
             <dd class="col-sm-10">@reservation.StartTime</dd>
-            <dt class="col-sm-2">EndTime</dt>
+            <dt class="col-sm-2">Befejezés időpontja</dt>
             <dd class="col-sm-10">@reservation.EndTime</dd>
         </dl>
         <div>
-            <a href="@($"/reservations/edit?reservationid={reservation.ReservationId}")">Edit</a> |
-            <a href="@($"/reservations")">Back to List</a>
+            <a href="@($"/reservations/edit?reservationid={reservation.ReservationId}")">Szerkesztés</a> |
+            <a href="@($"/reservations")">Vissza a listához</a>
         </div>
     }
 </div>

@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/TwoFactorAuthentication"
+@page "/Account/Manage/TwoFactorAuthentication"
 
 @using Microsoft.AspNetCore.Http.Features
 @using Microsoft.AspNetCore.Identity
@@ -19,22 +19,22 @@
         if (recoveryCodesLeft == 0)
         {
             <div class="alert alert-danger">
-                <strong>Nincs több helyreállító kódod.</strong>
-                <p>Új <a href="Account/Manage/GenerateRecoveryCodes">helyreállítókód-készletet kell generálnod</a>, mielőtt helyreállító kóddal be tudnál jelentkezni.</p>
+                <strong>Nincs több helyreállító kódja.</strong>
+                <p>Új <a href="Account/Manage/GenerateRecoveryCodes">helyreállítókód-készletet kell generálnia</a>, mielőtt helyreállító kóddal be tudna jelentkezni.</p>
             </div>
         }
         else if (recoveryCodesLeft == 1)
         {
             <div class="alert alert-danger">
-                <strong>1 helyreállító kódod maradt.</strong>
-                <p><a href="Account/Manage/GenerateRecoveryCodes">Új helyreállítókód-készletet generálhatsz</a>.</p>
+                <strong>1 helyreállító kódja maradt.</strong>
+                <p><a href="Account/Manage/GenerateRecoveryCodes">Új helyreállítókód-készletet generálhat</a>.</p>
             </div>
         }
         else if (recoveryCodesLeft <= 3)
         {
             <div class="alert alert-warning">
-                <strong>@recoveryCodesLeft helyreállító kódod maradt.</strong>
-                <p>Érdemes <a href="Account/Manage/GenerateRecoveryCodes">új helyreállítókód-készletet generálnod</a>.</p>
+                <strong>@recoveryCodesLeft helyreállító kódja maradt.</strong>
+                <p>Érdemes <a href="Account/Manage/GenerateRecoveryCodes">új helyreállítókód-készletet generálnia</a>.</p>
             </div>
         }
 
@@ -65,7 +65,7 @@ else
 {
     <div class="alert alert-danger">
         <strong>Az adatvédelmi és cookie-szabályzat elfogadása még nem történt meg.</strong>
-        <p>A kétlépcsős hitelesítés bekapcsolása előtt el kell fogadnod a szabályzatot.</p>
+        <p>A kétlépcsős hitelesítés bekapcsolása előtt el kell fogadnia a szabályzatot.</p>
     </div>
 }
 

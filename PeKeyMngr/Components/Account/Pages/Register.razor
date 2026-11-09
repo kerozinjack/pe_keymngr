@@ -1,4 +1,4 @@
-﻿@page "/Account/Register"
+@page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -14,8 +14,6 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-
-<PageTitle>Register</PageTitle>
 
 <PageTitle>Regisztráció</PageTitle>
 
@@ -34,7 +32,7 @@
                             <div class="mb-4">
                                 <h1 class="fw-bold mb-2">Fiók létrehozása</h1>
                                 <p class="text-secondary mb-0">
-                                    Regisztrálj, hogy elkezdhesd használni a PeKeyMngr-t.
+                                    Regisztráljon, hogy elkezdhesse használni a PeKeyMngr-t.
                                 </p>
                             </div>
 
@@ -78,7 +76,7 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Hozz létre egy jelszót" />
+                                               placeholder="Hozzon létre egy jelszót" />
 
                                     <ValidationMessage For="() => Input.Password"
                                                        class="text-danger small mt-1" />
@@ -96,7 +94,7 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Erősítsd meg a jelszavad" />
+                                               placeholder="Erősítse meg a jelszavát" />
 
                                     <ValidationMessage For="() => Input.ConfirmPassword"
                                                        class="text-danger small mt-1" />
@@ -111,7 +109,7 @@
                                 <!-- Bejelentkezési link -->
                                 <div class="text-center mt-4">
                                     <span class="text-secondary">
-                                        Már van fiókod?
+                                        Már van fiókja?
                                     </span>
 
                                     <a href="Account/Login"
@@ -214,7 +212,7 @@
     private sealed class InputModel
     {
         [Required]
-        [EmailAddress]
+        [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
 

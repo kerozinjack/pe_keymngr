@@ -1,4 +1,4 @@
-﻿@page "/Account/LoginWith2fa"
+@page "/Account/LoginWith2fa"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
@@ -14,7 +14,7 @@
 <h1>Kétlépcsős hitelesítés</h1>
 <hr />
 <StatusMessage Message="@message" />
-<p>A bejelentkezésedet egy hitelesítő alkalmazás védi. Add meg alább az alkalmazás által generált kódot.</p>
+<p>Bejelentkezését egy hitelesítő alkalmazás védi. Adja meg alább az alkalmazás által generált kódot.</p>
 <div class="row">
     <div class="col-md-4">
         <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
@@ -40,8 +40,8 @@
     </div>
 </div>
 <p>
-    Nem férsz hozzá a hitelesítő eszközödhöz? Ebben az esetben
-    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">helyreállítási kóddal is bejelentkezhetsz</a>.
+    Nem fér hozzá a hitelesítő eszközéhez? Ebben az esetben
+    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">helyreállítási kóddal is bejelentkezhet</a>.
 </p>
 
 @code {
