@@ -211,20 +211,20 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
-        [Display(Name = "Email")]
+        [Display(Name = "E-mail-cím")]
         public string Email { get; set; } = "";
 
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
+        [StringLength(100, ErrorMessage = "A(z) {0} hossza legalább {2}, legfeljebb {1} karakter lehet.", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        [Display(Name = "Password")]
+        [Display(Name = "Jelszó")]
         public string Password { get; set; } = "";
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        [Display(Name = "Jelszó megerősítése")]
+        [Compare("Password", ErrorMessage = "A jelszó és a megerősítése nem egyezik.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }

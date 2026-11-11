@@ -91,7 +91,7 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [StringLength(7, ErrorMessage = "A(z) {0} hossza legalább {2}, legfeljebb {1} karakter lehet.", MinimumLength = 6)]
         [DataType(DataType.Text)]
         [Display(Name = "Hitelesítési kód")]

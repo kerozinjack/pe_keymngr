@@ -210,8 +210,9 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
+        [Display(Name = "E-mail-cím")]
         public string Email { get; set; } = "";
     }
 }

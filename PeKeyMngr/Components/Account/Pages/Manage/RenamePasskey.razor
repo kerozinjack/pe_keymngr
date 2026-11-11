@@ -88,8 +88,9 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [StringLength(200, ErrorMessage = "A passkey neve legfeljebb {1} karakter hosszú lehet.")]
+        [Display(Name = "Passkey neve")]
         public string Name { get; set; } = "";
     }
 }

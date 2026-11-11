@@ -80,7 +80,7 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [DataType(DataType.Text)]
         [Display(Name = "Helyreállítási kód")]
         public string RecoveryCode { get; set; } = "";
