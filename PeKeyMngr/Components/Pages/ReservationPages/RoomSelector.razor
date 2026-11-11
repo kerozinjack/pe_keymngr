@@ -1,0 +1,244 @@
+@using PeKeyMngr.Models
+
+<section class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-lg-5">
+                <label for="room-search" class="form-label">Terem vagy felszerelés keresése</label>
+                <input id="room-search"
+                       type="search"
+                       class="form-control"
+                       placeholder="Keresés név vagy felszerelés alapján"
+                       @bind="RoomSearchText"
+                       @bind:event="oninput"
+                       @bind:after="RoomFiltersChangedAsync" />
+            </div>
+            <div class="col-12 col-lg-7 d-flex flex-wrap align-items-end gap-2">
+                <button type="button"
+                        class="btn @(SelectedCapacityFilter == CapacityFilter.UpTo20 ? "btn-primary" : "btn-outline-primary")"
+                        aria-pressed="@(SelectedCapacityFilter == CapacityFilter.UpTo20)"
+                        @onclick="() => ToggleCapacityFilterAsync(CapacityFilter.UpTo20)">
+                    20 fő vagy kevesebb
+                </button>
+                <button type="button"
+                        class="btn @(SelectedCapacityFilter == CapacityFilter.From21To50 ? "btn-primary" : "btn-outline-primary")"
+                        aria-pressed="@(SelectedCapacityFilter == CapacityFilter.From21To50)"
+                        @onclick="() => ToggleCapacityFilterAsync(CapacityFilter.From21To50)">
+                    21–50 fő
+                </button>
+                <button type="button"
+                        class="btn @(SelectedCapacityFilter == CapacityFilter.Over50 ? "btn-primary" : "btn-outline-primary")"
+                        aria-pressed="@(SelectedCapacityFilter == CapacityFilter.Over50)"
+                        @onclick="() => ToggleCapacityFilterAsync(CapacityFilter.Over50)">
+                    50 fő felett
+                </button>
+                <button type="button"
+                        class="btn @(OnlyAvailableRooms ? "btn-success" : "btn-outline-success")"
+                        aria-pressed="@OnlyAvailableRooms"
+                        @onclick="ToggleAvailableRoomsAsync">
+                    Csak szabad termek
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="booking-content">
+    <section class="booking-floor-panel">
+        <h2 class="h5">Épület és emelet</h2>
+        @if (Floors.Count == 0)
+        {
+            <p class="text-muted mb-0">Nincs terem az adatbázisban.</p>
+        }
+        else
+        {
+            <div class="booking-floor-list">
+                @foreach (var floor in Floors)
+                {
+                    <button type="button"
+                            class="booking-floor-button @(SelectedFloorKey == floor.Key ? "selected" : "")"
+                            @onclick="() => SelectFloorAsync(floor)">
+                        <span>@floor.Building épület · @floor.Floor</span>
+                        <span class="booking-floor-action">Megtekintés →</span>
+                    </button>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="booking-room-panel">
+        @if (SelectedFloor is null)
+        {
+            <div class="empty-selection">
+                @(Rooms.Count == 0
+                    ? "Nincs megjeleníthető terem az adatbázisban."
+                    : "Válasszon emeletet a termek megtekintéséhez.")
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">@SelectedFloor.Building épület · @SelectedFloor.Floor</h2>
+                    <p class="text-muted small mb-0">@ScheduleSummary</p>
+                </div>
+            </div>
+
+            @if (VisibleRooms.Count == 0)
+            {
+                <div class="empty-selection">Nincs a keresésnek és a szűrőknek megfelelő terem ezen az emeleten.</div>
+            }
+            else
+            {
+                <div class="booking-room-grid">
+                    @foreach (var room in VisibleRooms)
+                    {
+                        <button type="button"
+                                class="booking-room-card @room.AvailabilityClass @(SelectedRoomId == room.Room.RoomId ? "selected" : "")"
+                                disabled="@(!room.IsAvailable)"
+                                @onclick="() => SelectRoomAsync(room)">
+                            <span class="booking-room-name">@room.Room.RoomName</span>
+                            <span class="booking-room-status">@room.AvailabilityLabel</span>
+                            <span>@room.Room.Capacity fő</span>
+                            <span class="booking-room-equipment">
+                                @if (room.Room.Equipments.Count == 0)
+                                {
+                                    <span>Nincs felszerelés megadva</span>
+                                }
+                                else
+                                {
+                                    @string.Join(", ", room.Room.Equipments.Select(equipment => equipment.EquipmentName))
+                                }
+                            </span>
+                        </button>
+                    }
+                </div>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<RoomOption> Rooms { get; set; } = Array.Empty<RoomOption>();
+
+    [Parameter]
+    public string ScheduleSummary { get; set; } = "";
+
+    [Parameter]
+    public Guid? SelectedRoomId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedRoomIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnFiltersChanged { get; set; }
+
+    private string RoomSearchText { get; set; } = "";
+    private CapacityFilter? SelectedCapacityFilter { get; set; }
+    private bool OnlyAvailableRooms { get; set; }
+    private string SelectedFloorKey { get; set; } = "";
+
+    private List<FloorOption> Floors =>
+        Rooms.Select(option => new FloorOption(option.Room.Building, option.Room.Floor))
+            .Distinct()
+            .ToList();
+
+    private FloorOption? SelectedFloor =>
+        Floors.FirstOrDefault(floor => floor.Key == SelectedFloorKey);
+
+    private List<RoomOption> VisibleRooms =>
+        SelectedFloor is null
+            ? new()
+            : Rooms.Where(option =>
+                    option.Room.Building == SelectedFloor.Building &&
+                    option.Room.Floor == SelectedFloor.Floor &&
+                    MatchesRoomFilters(option))
+                .ToList();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(SelectedFloorKey))
+        {
+            return;
+        }
+
+        RoomOption? selectedRoom = Rooms.FirstOrDefault(option => option.Room.RoomId == SelectedRoomId);
+        FloorOption? initialFloor = selectedRoom is null
+            ? Floors.FirstOrDefault()
+            : Floors.FirstOrDefault(floor =>
+                floor.Building == selectedRoom.Room.Building && floor.Floor == selectedRoom.Room.Floor);
+
+        if (initialFloor is not null)
+        {
+            SelectedFloorKey = initialFloor.Key;
+        }
+    }
+
+    private bool MatchesRoomFilters(RoomOption option)
+    {
+        Room room = option.Room;
+        bool matchesSearch = string.IsNullOrWhiteSpace(RoomSearchText) ||
+                             room.RoomName.Contains(RoomSearchText, StringComparison.OrdinalIgnoreCase) ||
+                             room.Equipments.Any(equipment =>
+                                 equipment.EquipmentName.Contains(RoomSearchText, StringComparison.OrdinalIgnoreCase));
+        bool matchesCapacity = SelectedCapacityFilter switch
+        {
+            CapacityFilter.UpTo20 => room.Capacity <= 20,
+            CapacityFilter.From21To50 => room.Capacity > 20 && room.Capacity <= 50,
+            CapacityFilter.Over50 => room.Capacity > 50,
+            _ => true
+        };
+        bool matchesAvailability = !OnlyAvailableRooms || option.IsAvailable;
+
+        return matchesSearch && matchesCapacity && matchesAvailability;
+    }
+
+    private async Task SelectFloorAsync(FloorOption floor)
+    {
+        SelectedFloorKey = floor.Key;
+        if (SelectedRoomId is not null &&
+            !VisibleRooms.Any(option => option.Room.RoomId == SelectedRoomId))
+        {
+            await SelectedRoomIdChanged.InvokeAsync(null);
+        }
+    }
+
+    private Task SelectRoomAsync(RoomOption room) =>
+        room.IsAvailable
+            ? SelectedRoomIdChanged.InvokeAsync(room.Room.RoomId)
+            : Task.CompletedTask;
+
+    private async Task RoomFiltersChangedAsync()
+    {
+        await OnFiltersChanged.InvokeAsync();
+        if (SelectedRoomId is not null && !VisibleRooms.Any(option => option.Room.RoomId == SelectedRoomId))
+        {
+            await SelectedRoomIdChanged.InvokeAsync(null);
+        }
+    }
+
+    private async Task ToggleCapacityFilterAsync(CapacityFilter filter)
+    {
+        SelectedCapacityFilter = SelectedCapacityFilter == filter ? null : filter;
+        await RoomFiltersChangedAsync();
+    }
+
+    private async Task ToggleAvailableRoomsAsync()
+    {
+        OnlyAvailableRooms = !OnlyAvailableRooms;
+        await RoomFiltersChangedAsync();
+    }
+
+    private sealed record FloorOption(string Building, string Floor)
+    {
+        public string Key => $"{Building}\u001f{Floor}";
+    }
+
+    private enum CapacityFilter
+    {
+        UpTo20,
+        From21To50,
+        Over50
+    }
+}

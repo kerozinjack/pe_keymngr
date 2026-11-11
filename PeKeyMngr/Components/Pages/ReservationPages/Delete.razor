@@ -1,36 +1,41 @@
 @page "/reservations/delete"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data
 @using PeKeyMngr.Models
 @inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
-<PageTitle>Delete</PageTitle>
+<PageTitle>Törlés</PageTitle>
 
-<h1>Delete</h1>
+<h1>Törlés</h1>
 
-<p>Are you sure you want to delete this?</p>
+<p>Biztosan törölni szeretné?</p>
 <div>
-    <h2>Reservation</h2>
+    <h2>Foglalás</h2>
     <hr />
     @if (reservation is null)
     {
-        <p><em>Loading...</em></p>
+        <p><em>Betöltés...</em></p>
     }
     else {
         <dl class="row">
-            <dt class="col-sm-2">StartTime</dt>
+            <dt class="col-sm-2">Kezdés időpontja</dt>
             <dd class="col-sm-10">@reservation.StartTime</dd>
         </dl>
         <dl class="row">
-            <dt class="col-sm-2">EndTime</dt>
+            <dt class="col-sm-2">Befejezés időpontja</dt>
             <dd class="col-sm-10">@reservation.EndTime</dd>
         </dl>
         <EditForm method="post" Model="reservation" OnValidSubmit="DeleteReservation" FormName="delete" Enhance>
-            <button type="submit" class="btn btn-danger" disabled="@(reservation is null)">Delete</button> |
-            <a href="/reservations">Back to List</a>
+            <button type="submit" class="btn btn-danger" disabled="@(reservation is null)">Törlés</button> |
+            <a href="/reservations">Vissza a listához</a>
         </EditForm>
     }
 </div>
@@ -43,8 +48,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        reservation = await context.Reservations.FirstOrDefaultAsync(m => m.ReservationId == ReservationId);
+        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        string? userId = UserManager.GetUserId(authenticationState.User);
+        if (userId is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        reservation = await context.Reservations
+            .FirstOrDefaultAsync(item => item.ReservationId == ReservationId && item.RequestedBy.Id == userId);
 
         if (reservation is null)
         {
@@ -54,8 +68,24 @@
 
     private async Task DeleteReservation()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.Reservations.Remove(reservation!);
+        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        string? userId = UserManager.GetUserId(authenticationState.User);
+        if (userId is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        Reservation? reservationToDelete = await context.Reservations
+            .FirstOrDefaultAsync(item => item.ReservationId == ReservationId && item.RequestedBy.Id == userId);
+        if (reservationToDelete is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        context.Reservations.Remove(reservationToDelete);
         await context.SaveChangesAsync();
         NavigationManager.NavigateTo("/reservations");
     }

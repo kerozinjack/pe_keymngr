@@ -1,11 +1,15 @@
 @page "/reservations"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.AspNetCore.Identity
 @using PeKeyMngr.Models
 @using PeKeyMngr.Data
 @implements IAsyncDisposable
 @inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
@@ -20,7 +24,7 @@
             </p>
         </div>
 
-        <a href="reservations/create" class="btn btn-primary">
+        <a href="/booking" class="btn btn-primary">
             Új foglalás
         </a>
     </div>
@@ -32,7 +36,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <QuickGrid Class="table table-hover align-middle mb-0" Items="context.Reservations.Include(r=>r.Room).Include(r=>r.Equipments)">
+                <QuickGrid Class="table table-hover align-middle mb-0" Items="reservations">
                     <PropertyColumn Property="reservation => reservation.StartTime" Title="Kezdés" />
                     <PropertyColumn Property="reservation => reservation.EndTime" Title="Befejezés" />
                     <PropertyColumn Property="reservation => reservation.Room.RoomName" Title="Terem" />
@@ -62,10 +66,27 @@
 
 @code {
     private ApplicationDbContext context = default!;
+    private IQueryable<Reservation> reservations = default!;
 
     protected override void OnInitialized()
     {
         context = DbFactory.CreateDbContext();
+        reservations = context.Reservations.Where(_ => false);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        string? userId = UserManager.GetUserId(authenticationState.User);
+        if (userId is null)
+        {
+            throw new InvalidOperationException("A bejelentkezett tanár azonosítója nem érhető el.");
+        }
+
+        reservations = context.Reservations
+            .Where(reservation => reservation.RequestedBy.Id == userId)
+            .Include(reservation => reservation.Room)
+            .Include(reservation => reservation.Equipments);
     }
 
     public string GetEquipments(Guid reservationId)

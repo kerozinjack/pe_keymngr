@@ -1,0 +1,126 @@
+.booking-content {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+    gap: 1.25rem;
+}
+
+.booking-floor-panel,
+.booking-room-panel {
+    min-width: 0;
+    padding: 1.25rem;
+    border: 2px solid #222;
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow: 4px 4px 0 rgb(0 0 0 / 8%);
+}
+
+.booking-floor-panel h2 {
+    margin-bottom: 1rem;
+}
+
+.booking-floor-list {
+    display: grid;
+    border: 2px solid #222;
+}
+
+.booking-floor-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.75rem;
+    padding: 0.75rem;
+    border: 0;
+    border-bottom: 2px solid #222;
+    background: #fff;
+    color: #222;
+    text-align: left;
+}
+
+.booking-floor-button:last-child {
+    border-bottom: 0;
+}
+
+.booking-floor-button:hover,
+.booking-floor-button.selected {
+    background: #f1f3f5;
+}
+
+.booking-floor-action {
+    color: #277719;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.booking-room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.875rem;
+}
+
+.booking-room-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.625rem;
+    min-height: 160px;
+    padding: 1rem;
+    border: 2px solid #222;
+    border-radius: 0.5rem;
+    color: #fff;
+    text-align: center;
+}
+
+.booking-room-card.available {
+    background: #3b9723;
+    cursor: pointer;
+}
+
+.booking-room-card.reserved {
+    background: #c91818;
+}
+
+.booking-room-card.maintenance {
+    background: #d99e00;
+}
+
+.booking-room-card.unknown {
+    background: #6c757d;
+}
+
+.booking-room-card.available:hover,
+.booking-room-card.available.selected {
+    filter: brightness(1.08);
+    box-shadow: 0 0 0 3px rgb(59 151 35 / 25%);
+}
+
+.booking-room-card:disabled {
+    opacity: 0.82;
+}
+
+.booking-room-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.booking-room-status {
+    padding: 0.2rem 0.625rem;
+    border-radius: 0.25rem;
+    background: #fff;
+    color: #222;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.booking-room-equipment {
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+    .booking-content {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
