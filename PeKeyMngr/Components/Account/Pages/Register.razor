@@ -36,7 +36,7 @@
                                 </p>
                             </div>
 
-                            <StatusMessage Message="@Message" />
+                            <AccountErrorList Messages="@(identityErrors?.Select(error => error.Description))" />
 
                             <EditForm Model="Input"
                                       method="post"
@@ -45,7 +45,7 @@
 
                                 <DataAnnotationsValidator />
 
-                                <ValidationSummary class="text-danger" role="alert" />
+                                <AccountErrorList />
 
                                 <!-- E-mail -->
                                 <div class="mb-3">
@@ -140,8 +140,6 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
-
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
     protected override void OnInitialized()
     {

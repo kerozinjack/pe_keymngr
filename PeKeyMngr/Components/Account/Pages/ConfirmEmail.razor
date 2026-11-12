@@ -8,9 +8,9 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Email cím megerősítése</PageTitle>
+<PageTitle>E-mail-cím megerősítése</PageTitle>
 
-<h1>Email cím megerősítése</h1>
+<h1>E-mail-cím megerősítése</h1>
 <StatusMessage Message="@statusMessage" />
 
 @code {
@@ -37,13 +37,15 @@
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading user with ID {UserId}";
+            statusMessage = $"Hiba: A(z) '{UserId}' azonosítójú felhasználó betöltése nem sikerült.";
         }
         else
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
             var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Email cím megerősítve." : "Email cím megerősítése sikertelen.";
+            statusMessage = result.Succeeded
+                ? "Az e-mail-cím megerősítése sikerült."
+                : "Hiba: Az e-mail-cím megerősítése nem sikerült.";
         }
     }
 }

@@ -41,7 +41,7 @@
 
                                 <DataAnnotationsValidator />
 
-                                <ValidationSummary class="text-danger" role="alert" />
+                                <AccountErrorList />
 
                                 <!-- E-mail -->
                                 <div class="mb-3">
@@ -171,7 +171,7 @@
     {
         if (!string.IsNullOrEmpty(Input.Passkey?.Error))
         {
-            errorMessage = $"Error: {Input.Passkey.Error}";
+            errorMessage = $"Hiba: {Input.Passkey.Error}";
             return;
         }
 

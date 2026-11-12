@@ -12,7 +12,7 @@ async function fetchWithErrorHandling(url, options = {}) {
     if (!response.ok) {
         const text = await response.text();
         console.error(text);
-        throw new Error(`The server responded with status ${response.status}.`);
+        throw new Error(`A szerver hibával válaszolt (HTTP ${response.status}).`);
     }
     return response;
 }
@@ -68,7 +68,7 @@ customElements.define('passkey-submit', class extends HTMLElement {
 
     async obtainCredential(useConditionalMediation, signal) {
         if (!browserSupportsPasskeys) {
-            throw new Error('Some passkey features are missing. Please update your browser.');
+            throw new Error('A böngésző nem támogatja a szükséges passkey-funkciókat. Frissítse a böngészőt.');
         }
 
         const headers = {
@@ -82,7 +82,7 @@ customElements.define('passkey-submit', class extends HTMLElement {
             const mediation = useConditionalMediation ? 'conditional' : undefined;
             return await requestCredential(email, mediation, headers, signal);
         } else {
-            throw new Error(`Unknown passkey operation '${this.attrs.operation}'.`);
+            throw new Error(`Ismeretlen passkey-művelet: '${this.attrs.operation}'.`);
         }
     }
 
