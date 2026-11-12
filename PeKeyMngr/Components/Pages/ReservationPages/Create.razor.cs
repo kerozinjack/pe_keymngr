@@ -31,6 +31,14 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         [SupplyParameterFromQuery(Name = "roomId")]
         public Guid? InitialRoomId { get; set; }
 
+        [SupplyParameterFromQuery(Name = "reservationid")]
+        public Guid? ReservationId { get; set; }
+
+        private bool IsEditMode =>
+            new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/').EndsWith(
+                "/reservations/edit",
+                StringComparison.OrdinalIgnoreCase);
+
         private ApplicationDbContext context = default!;
         private ApplicationUser? CurrentUser;
         private List<Room> Rooms = new();
@@ -40,8 +48,12 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private DateTime SelectedDate { get; set; }
         private int StartHour { get; set; }
         private int DurationMinutes { get; set; } = 45;
+        private int? ExistingDurationMinutes { get; set; }
+        private DateTime? ExistingStartTime { get; set; }
         private Guid? SelectedRoomId { get; set; }
+        private bool IsLoading { get; set; }
         private bool IsAuthorized { get; set; }
+        private bool CanEditReservation { get; set; }
         private bool ShowSuccessModal { get; set; }
         private string ReservationSuccessRoom { get; set; } = "";
         private string ReservationSuccessSchedule { get; set; } = "";
@@ -59,18 +71,43 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     availability == RoomAvailability.Available);
             }).ToList();
 
-        private List<int> AvailableStartHours =>
-            SelectedDate.Date == DateTime.Today
-                ? GetStartHours(Math.Max(8, DateTime.Now.Hour + 1))
-                : SelectedDate.Date > DateTime.Today
-                    ? Enumerable.Range(8, 11).ToList()
-                    : new();
+        private List<int> AvailableStartHours
+        {
+            get
+            {
+                List<int> startHours = SelectedDate.Date == DateTime.Today
+                    ? GetStartHours(Math.Max(8, DateTime.Now.Hour + 1))
+                    : SelectedDate.Date > DateTime.Today
+                        ? Enumerable.Range(8, 11).ToList()
+                        : new();
 
-        private IEnumerable<int> AvailableDurations =>
-            StartHour >= 8 && StartHour <= 18
-                ? Enumerable.Range(1, (20 - StartHour) * 60 / 45)
-                    .Select(intervalCount => intervalCount * 45)
-                : Enumerable.Empty<int>();
+                return startHours
+                    .Where(hour => !IsWithinStartCutoff(SelectedDate.Date.AddHours(hour)))
+                    .ToList();
+            }
+        }
+
+        private IEnumerable<int> AvailableDurations
+        {
+            get
+            {
+                IEnumerable<int> durations = StartHour >= 8 && StartHour <= 18
+                    ? Enumerable.Range(1, (20 - StartHour) * 60 / 45)
+                        .Select(intervalCount => intervalCount * 45)
+                    : Enumerable.Empty<int>();
+
+                if (IsEditMode &&
+                    ExistingDurationMinutes is int existingDuration &&
+                    existingDuration % 45 != 0 &&
+                    ExistingStartTime?.Date == SelectedDate.Date &&
+                    ExistingStartTime?.Hour == StartHour)
+                {
+                    durations = durations.Append(existingDuration).OrderBy(duration => duration);
+                }
+
+                return durations;
+            }
+        }
 
         private List<EquipmentOption> AvailableExtraEquipmentOptions =>
             EquipmentOptions
@@ -88,8 +125,10 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             get
             {
                 if (!IsAuthorized ||
+                    (IsEditMode && !CanEditReservation) ||
                     !TryGetSchedule(out DateTime start, out _) ||
                     start < DateTime.Now ||
+                    IsWithinStartCutoff(start) ||
                     SelectedRoomId is not Guid roomId)
                 {
                     return false;
@@ -100,14 +139,69 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             }
         }
 
-        private string ScheduleSummary =>
-            TryGetSchedule(out DateTime start, out DateTime end)
-                ? start < DateTime.Now
-                    ? "A foglalás kezdete nem lehet múltbeli."
-                    : $"{start:g} – {end:t}"
-                : "Adjon meg érvényes kezdést és 45 perces lépésekben megadható időtartamot.";
+        private string ScheduleSummary
+        {
+            get
+            {
+                DateTime requestedStart = SelectedDate.Date.AddHours(StartHour);
+                if (requestedStart < DateTime.Now)
+                {
+                    return "A foglalás kezdete nem lehet múltbeli.";
+                }
 
-        protected override async Task OnInitializedAsync()
+                if (IsWithinStartCutoff(requestedStart))
+                {
+                    return "A foglalást legalább 24 órával a kezdés előtt kell rögzíteni.";
+                }
+
+                return TryGetSchedule(out DateTime start, out DateTime end)
+                    ? $"{start:g} – {end:t}"
+                    : "Adjon meg érvényes kezdést és 45 perces lépésekben megadható időtartamot.";
+            }
+        }
+
+        protected override async Task OnParametersSetAsync()
+        {
+            IsLoading = true;
+            try
+            {
+                if (context is not null)
+                {
+                    await context.DisposeAsync();
+                }
+
+                ResetState();
+                await LoadPageAsync();
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private void ResetState()
+        {
+            CurrentUser = null;
+            Rooms = new();
+            EquipmentOptions = new();
+            ReservationIntervals = new();
+            MaintenanceIntervals = new();
+            SelectedDate = default;
+            StartHour = 0;
+            DurationMinutes = 45;
+            ExistingDurationMinutes = null;
+            ExistingStartTime = null;
+            SelectedRoomId = null;
+            IsAuthorized = false;
+            CanEditReservation = false;
+            ShowSuccessModal = false;
+            ReservationSuccessRoom = "";
+            ReservationSuccessSchedule = "";
+            ReservationSuccessEquipment = "";
+            ErrorMessage = null;
+        }
+
+        private async Task LoadPageAsync()
         {
             context = await DbFactory.CreateDbContextAsync();
 
@@ -135,7 +229,13 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             }
 
             DateTime now = DateTime.Now;
-            DateTime nextWholeHour = now.Date.AddHours(now.Hour + 1);
+            DateTime earliestStart = now.AddHours(24);
+            DateTime nextWholeHour = earliestStart.Date.AddHours(earliestStart.Hour);
+            if (nextWholeHour <= earliestStart)
+            {
+                nextWholeHour = nextWholeHour.AddHours(1);
+            }
+
             if (nextWholeHour.Hour < 8)
             {
                 nextWholeHour = nextWholeHour.Date.AddHours(8);
@@ -148,6 +248,47 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             SelectedDate = nextWholeHour.Date;
             StartHour = nextWholeHour.Hour;
             DurationMinutes = 45;
+            HashSet<Guid> existingEquipmentIds = [];
+
+            if (IsEditMode)
+            {
+                if (ReservationId is not Guid reservationId)
+                {
+                    NavigationManager.NotFound();
+                    return;
+                }
+
+                Reservation? reservation = await context.Reservations
+                    .AsNoTracking()
+                    .Include(item => item.Room)
+                    .Include(item => item.Equipments)
+                    .FirstOrDefaultAsync(item =>
+                        item.ReservationId == reservationId &&
+                        item.RequestedBy.Id == userId);
+
+                if (reservation is null)
+                {
+                    NavigationManager.NotFound();
+                    return;
+                }
+
+                if (reservation.StartTime <= DateTime.Now.AddHours(24))
+                {
+                    ErrorMessage = "A foglalás a kezdés előtti 24 órában már nem módosítható.";
+                    return;
+                }
+
+                CanEditReservation = true;
+                ExistingStartTime = reservation.StartTime;
+                ExistingDurationMinutes = (int)(reservation.EndTime - reservation.StartTime).TotalMinutes;
+                SelectedDate = reservation.StartTime.Date;
+                StartHour = reservation.StartTime.Hour;
+                DurationMinutes = ExistingDurationMinutes.Value;
+                SelectedRoomId = reservation.Room.RoomId;
+                existingEquipmentIds = reservation.Equipments
+                    .Select(equipment => equipment.EquipmentId)
+                    .ToHashSet();
+            }
 
             Rooms = await context.Rooms
                 .Include(room => room.Equipments)
@@ -163,8 +304,14 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 .Select(equipment => new EquipmentOption(equipment.EquipmentId, equipment.EquipmentName))
                 .ToListAsync();
 
-            var reservationRanges = await context.Reservations
-                .AsNoTracking()
+            IQueryable<Reservation> reservationsQuery = context.Reservations.AsNoTracking();
+            if (IsEditMode && ReservationId is Guid currentReservationId)
+            {
+                reservationsQuery = reservationsQuery
+                    .Where(reservation => reservation.ReservationId != currentReservationId);
+            }
+
+            var reservationRanges = await reservationsQuery
                 .Select(reservation => new
                 {
                     RoomId = reservation.Room.RoomId,
@@ -179,6 +326,11 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     reservation.EndTime))
                 .ToList();
 
+            foreach (EquipmentOption option in EquipmentOptions)
+            {
+                option.Selected = existingEquipmentIds.Contains(option.Id);
+            }
+
             List<MaintenanceWindow> maintenanceWindows = await context.MaintenanceWindows
                 .Include(maintenance => maintenance.AffectedRooms)
                 .AsNoTracking()
@@ -188,7 +340,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     new BookingInterval(room.RoomId, maintenance.StartTime, maintenance.EndTime)))
                 .ToList();
 
-            if (InitialRoomId is Guid initialRoomId)
+            if (!IsEditMode && InitialRoomId is Guid initialRoomId)
             {
                 Room? initialRoom = Rooms.FirstOrDefault(room => room.RoomId == initialRoomId);
                 if (initialRoom is not null && GetAvailability(initialRoomId) == RoomAvailability.Available)
@@ -201,6 +353,11 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private async Task CreateReservationAsync()
         {
             ErrorMessage = null;
+            if (IsEditMode && !CanEditReservation)
+            {
+                ErrorMessage = "A foglalás a kezdés előtti 24 órában már nem módosítható.";
+                return;
+            }
 
             AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             string? currentUserId = UserManager.GetUserId(authenticationState.User);
@@ -223,6 +380,12 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             if (!isTeacher)
             {
                 ErrorMessage = "Nincs jogosultsága foglalást indítani.";
+                return;
+            }
+
+            if (IsWithinStartCutoff(SelectedDate.Date.AddHours(StartHour)))
+            {
+                ErrorMessage = "A foglalás kezdése legalább 24 órával később lehet.";
                 return;
             }
 
@@ -277,10 +440,47 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             await using IDbContextTransaction transaction =
                 await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-            bool reservationConflict = await context.Reservations.AnyAsync(reservation =>
+            Reservation? reservationToUpdate = null;
+            if (IsEditMode)
+            {
+                if (ReservationId is not Guid reservationId)
+                {
+                    NavigationManager.NotFound();
+                    return;
+                }
+
+                reservationToUpdate = await context.Reservations
+                    .Include(reservation => reservation.Equipments)
+                    .FirstOrDefaultAsync(reservation =>
+                        reservation.ReservationId == reservationId &&
+                        reservation.RequestedBy.Id == currentUser.Id);
+
+                if (reservationToUpdate is null)
+                {
+                    NavigationManager.NotFound();
+                    return;
+                }
+
+                if (reservationToUpdate.StartTime <= DateTime.Now.AddHours(24))
+                {
+                    CanEditReservation = false;
+                    ErrorMessage = "A foglalás a kezdés előtti 24 órában már nem módosítható.";
+                    return;
+                }
+            }
+
+            IQueryable<Reservation> reservationsForConflict = context.Reservations
+                .Where(reservation =>
                 reservation.Room.RoomId == roomId &&
                 reservation.StartTime < end &&
                 reservation.EndTime > start);
+            if (ReservationId is Guid editedReservationId && IsEditMode)
+            {
+                reservationsForConflict = reservationsForConflict
+                    .Where(reservation => reservation.ReservationId != editedReservationId);
+            }
+
+            bool reservationConflict = await reservationsForConflict.AnyAsync();
             if (reservationConflict)
             {
                 ErrorMessage = "A terem erre az időszakra már foglalt.";
@@ -297,14 +497,25 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 return;
             }
 
-            context.Reservations.Add(new Reservation
+            if (reservationToUpdate is null)
             {
-                Room = room,
-                RequestedBy = currentUser,
-                StartTime = start,
-                EndTime = end,
-                Equipments = requestedEquipment
-            });
+                context.Reservations.Add(new Reservation
+                {
+                    Room = room,
+                    RequestedBy = currentUser,
+                    StartTime = start,
+                    EndTime = end,
+                    Equipments = requestedEquipment
+                });
+            }
+            else
+            {
+                reservationToUpdate.Room = room;
+                reservationToUpdate.StartTime = start;
+                reservationToUpdate.EndTime = end;
+                reservationToUpdate.Equipments.Clear();
+                reservationToUpdate.Equipments.AddRange(requestedEquipment);
+            }
 
             try
             {
@@ -315,6 +526,12 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             {
                 Logger.LogError(exception, "Failed to create a reservation for room {RoomId}", roomId);
                 ErrorMessage = "Nem sikerült elmenteni a foglalást. Próbálja újra.";
+                return;
+            }
+
+            if (IsEditMode && ReservationId is Guid updatedReservationId)
+            {
+                NavigationManager.NavigateTo($"/reservations/details?reservationid={updatedReservationId}");
                 return;
             }
 
@@ -346,12 +563,21 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 ? Enumerable.Range(firstHour, 19 - firstHour).ToList()
                 : new();
 
-        private static string FormatDuration(int durationMinutes) =>
-            durationMinutes % 60 == 0
-                ? $"{durationMinutes / 60} óra"
-                : durationMinutes > 60
-                    ? $"{durationMinutes / 60} óra {durationMinutes % 60} perc"
-                    : $"{durationMinutes} perc";
+        private static bool IsWithinStartCutoff(DateTime start) =>
+            start <= DateTime.Now.AddHours(24);
+
+        private static string FormatDuration(int durationMinutes)
+        {
+            if (durationMinutes % 45 != 0)
+            {
+                return $"{durationMinutes} perc (meglévő foglalás)";
+            }
+
+            int intervalCount = durationMinutes / 45;
+            return intervalCount == 1
+                ? "1 × 45 perc"
+                : $"{intervalCount} × 45 perc ({durationMinutes} perc)";
+        }
 
         private RoomAvailability GetAvailability(Guid roomId)
         {

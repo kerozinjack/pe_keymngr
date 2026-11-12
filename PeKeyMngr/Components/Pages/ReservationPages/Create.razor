@@ -1,21 +1,39 @@
 @page "/booking"
+@page "/reservations/edit"
 @using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
-<PageTitle>Új foglalás</PageTitle>
+<PageTitle>@(IsEditMode ? "Foglalás szerkesztése" : "Új foglalás")</PageTitle>
 
 <div class="container py-4 reservation-create">
     <div class="mb-4">
-        <h1 class="h2 fw-bold mb-1">Új foglalás</h1>
-        <p class="text-muted mb-0">Válasszon időpontot és szabad termet az épületben.</p>
+        <h1 class="h2 fw-bold mb-1">@(IsEditMode ? "Foglalás szerkesztése" : "Új foglalás")</h1>
+        <p class="text-muted mb-0">
+            @(IsEditMode
+                ? "Módosítsa a foglalás időpontját, termét vagy igényelt felszereléseit."
+                : "Válasszon időpontot és szabad termet az épületben.")
+        </p>
     </div>
 
-    @if (!IsAuthorized)
+    @if (IsLoading)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <p class="text-muted mb-0"><em>Betöltés...</em></p>
+            </div>
+        </div>
+    }
+    else if (!IsAuthorized)
     {
         <div class="alert alert-danger" role="alert">
             Foglalást csak tanári jogosultsággal lehet indítani.
         </div>
+    }
+    else if (IsEditMode && !CanEditReservation)
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+        <a class="btn btn-outline-secondary" href="/reservations">Vissza a foglalásokhoz</a>
     }
     else
     {
@@ -26,7 +44,7 @@
 
         <section class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3">
-                <h2 class="h5 mb-0">Időpont és foglaló</h2>
+                <h2 class="h5 mb-0">@(IsEditMode ? "Időpont" : "Időpont és foglaló")</h2>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -123,7 +141,7 @@
                     class="btn btn-primary btn-lg"
                     disabled="@(!CanSubmit)"
                     @onclick="CreateReservationAsync">
-                Foglalás létrehozása
+                @(IsEditMode ? "Módosítások mentése" : "Foglalás létrehozása")
             </button>
         </div>
     }

@@ -52,16 +52,19 @@
         }
         else
         {
-            <div class="booking-floor-list">
-                @foreach (var floor in Floors)
-                {
-                    <button type="button"
-                            class="booking-floor-button @(SelectedFloorKey == floor.Key ? "selected" : "")"
-                            @onclick="() => SelectFloorAsync(floor)">
-                        <span>@floor.Building épület · @floor.Floor</span>
-                        <span class="booking-floor-action">Megtekintés →</span>
-                    </button>
-                }
+            <div class="booking-building-visual">
+                <div class="booking-building-top"></div>
+                <div class="booking-floor-list">
+                    @foreach (var floor in Floors.AsEnumerable().Reverse())
+                    {
+                        <button type="button"
+                                class="booking-floor-button @(SelectedFloorKey == floor.Key ? "selected" : "")"
+                                @onclick="() => SelectFloorAsync(floor)">
+                            <span>@floor.Building épület · @floor.Floor</span>
+                            <span class="booking-floor-action">Megtekintés →</span>
+                        </button>
+                    }
+                </div>
             </div>
         }
     </section>
