@@ -1,10 +1,12 @@
 using PeKeyMngr.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace PeKeyMngr.Data.DTO
 {
     public class KeyDto
     {
         public Guid KeyId { get; set; }
+        [StringLength(100, ErrorMessage = "A kulcs nevének minimum 2 és maximum 100 karakter kell legyen", MinimumLength = 2)]
         public string KeyName { get; set; } = string.Empty;
         public List<Guid> AssignedRoomIds { get; set; } = [];
         public List<Guid> RequiredRoleIds { get; set; } = [];
