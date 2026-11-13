@@ -24,19 +24,19 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
 builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
+{
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
     .AddIdentityCookies();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = true;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-    })
+{
+    options.SignIn.RequireConfirmedAccount = true;
+    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+})
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddErrorDescriber<HungarianIdentityErrorDescriber>()
     .AddSignInManager()
@@ -51,7 +51,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CanAccessAdminPages());
     });
-    options.AddPolicy("CanTeacherAdminPages", policy =>
+    options.AddPolicy("CanAccessTeacherPages", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CanAccessTeacherPages());
@@ -74,6 +74,8 @@ builder.Services.AddScoped<IAuthorizationHandler, CanAccessOperationsDirectorPag
 
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<KeyManagementService>();
+
 WebApplication? app = builder.Build();
 
 // Apply database migrations
@@ -87,9 +89,11 @@ using (IServiceScope? scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
+    await Seeder.SeedAsync(app.Services);
 }
 else
 {
+    await Seeder.SeedUsersAsync(app.Services);
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();

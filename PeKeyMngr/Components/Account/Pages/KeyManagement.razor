@@ -1,0 +1,622 @@
+@page "/keymanagement"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using PeKeyMngr.Data
+@attribute [Authorize(Policy = "CanAccessJanitorPages")]
+@inject KeyManagementService KeyService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Kulcskiadás és visszavétel</PageTitle>
+
+<div class="container-fluid py-4 px-3 px-lg-4">
+    <!-- Fejléc -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Kulcskiadás és visszavétel</h3>
+            <p class="text-muted mb-0">Termek keresése, kulcsok kiadása és visszavétele.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="#active-issues" class="btn btn-outline-secondary">Kiadott kulcsok</a>
+            <button type="button" class="btn btn-outline-primary" disabled="@(isLoading || isBusy)" @onclick="RefreshAsync">
+                Adatok frissítése
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="alert alert-info">Adatok betöltése...</div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div role="alert" class="alert @(lastSuccess ? "alert-success" : "alert-danger")">
+                @message
+            </div>
+        }
+
+        <!-- Áttekintő számok: valós KeyTransaction állapot + DEMÓ-kulcskínálat -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body border-start border-4 border-primary rounded p-3">
+                        <div class="text-muted small mb-1">Elérhető termek (demó)</div>
+                        <div class="fs-3 fw-bold">@AvailableRoomCount</div>
+                        <div class="text-muted small">@roomCards.Count modellezett teremből</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body border-start border-4 border-success rounded p-3">
+                        <div class="text-muted small mb-1">Kiadható kulcsok (demó)</div>
+                        <div class="fs-3 fw-bold">@AvailableDemoKeyCount</div>
+                        <div class="text-muted small">Tesztfoglaláshoz kapcsolt kulcsok</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body border-start border-4 border-warning rounded p-3">
+                        <div class="text-muted small mb-1">Jelenleg kiadott kulcsok</div>
+                        <div class="fs-3 fw-bold">@activeIssues.Count</div>
+                        <div class="text-muted small">Adatbázis alapján</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body border-start border-4 border-secondary rounded p-3">
+                        <div class="text-muted small mb-1">Épületek (demó)</div>
+                        <div class="fs-3 fw-bold">@BuildingOptions.Count</div>
+                        <div class="text-muted small">Elérhető szűrők</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 align-items-start">
+            <!-- Keresés és teremválasztás -->
+            <div class="col-12 col-xl-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-3 p-lg-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div>
+                                <h5 class="fw-bold mb-1">Terem kiválasztása</h5>
+                                <p class="text-muted small mb-0">Keress teremre, épületre, kulcsra vagy oktatóra.</p>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary-emphasis">
+                                @FilteredRooms.Count találat
+                            </span>
+                        </div>
+
+                        @if (roomCards.Count == 0)
+                        {
+                            <div class="alert alert-info mb-0">
+                                Nem találhatók tesztfoglalásként használható terem–kulcs–oktató hozzárendelések.
+                                Ellenőrizd a Seedert és a kapcsolódó adatokat.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-7">
+                                    <label for="room-search" class="form-label small fw-semibold">Keresés</label>
+                                    <input id="room-search" type="search" class="form-control"
+                                           value="@searchText" @oninput="OnSearchChanged"
+                                           placeholder="Pl. I/102, kulcsnév, oktató..." disabled="@isBusy" />
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label for="building-filter" class="form-label small fw-semibold">Épület</label>
+                                    <select id="building-filter" class="form-select" value="@selectedBuilding"
+                                            @onchange="OnBuildingChanged" disabled="@isBusy">
+                                        <option value="">Összes épület</option>
+                                        @foreach (string building in BuildingOptions)
+                                        {
+                                            <option value="@building">@building</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="small fw-semibold mb-2">Szint</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm @(selectedFloor.Length == 0 ? "btn-primary" : "btn-outline-secondary")"
+                                            disabled="@isBusy" @onclick="() => SelectFloor(string.Empty)">
+                                        Összes szint
+                                    </button>
+                                    @foreach (string floor in FloorOptions)
+                                    {
+                                        <button type="button" class="btn btn-sm @(selectedFloor == floor ? "btn-primary" : "btn-outline-secondary")"
+                                                disabled="@isBusy" @onclick="() => SelectFloor(floor)">
+                                            @floor
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="only-available"
+                                           checked="@onlyAvailable" @onchange="OnOnlyAvailableChanged" disabled="@isBusy" />
+                                    <label class="form-check-label small" for="only-available">Csak kiadható kulccsal rendelkező termek</label>
+                                </div>
+                                <div class="small text-muted">Kattints egy teremkártyára a kiválasztáshoz.</div>
+                            </div>
+
+                            @if (FilteredRooms.Count == 0)
+                            {
+                                <div class="alert alert-light border text-muted mb-0">
+                                    Nincs találat a megadott szűrőkkel. Próbálj másik keresést vagy szintet!
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="row g-3">
+                                    @foreach (RoomOption room in PagedRooms)
+                                    {
+                                        <div class="col-12 col-md-6 col-xxl-4" @key="room.RoomId">
+                                            <button type="button"
+                                                    class="card w-100 h-100 text-start shadow-sm p-3 @(selectedRoomId == room.RoomId ? "border-primary border-2" : "border-light")"
+                                                    aria-pressed="@(selectedRoomId == room.RoomId)"
+                                                    disabled="@isBusy"
+                                                    @onclick="() => SelectRoom(room.RoomId)">
+                                                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                                    <div class="fw-bold fs-5 text-dark text-break">@room.DisplayName</div>
+                                                    @if (AvailableKeysForRoom(room) > 0)
+                                                    {
+                                                        <span class="badge bg-success-subtle text-success-emphasis text-nowrap">Kiadható</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger-subtle text-danger-emphasis text-nowrap">Kiadva</span>
+                                                    }
+                                                </div>
+                                                <div class="text-muted small text-break">@room.Building</div>
+                                                <div class="text-muted small mb-3">@room.Floor</div>
+                                                <div class="mt-auto d-flex justify-content-between align-items-center gap-2 border-top pt-2 small">
+                                                    <span class="text-secondary">@AvailableKeysForRoom(room) szabad kulcs</span>
+                                                    <span class="@(selectedRoomId == room.RoomId ? "text-primary" : "text-muted") fw-semibold">
+                                                        @(selectedRoomId == room.RoomId ? "Kiválasztva" : "Részletek")
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (PageCount > 1)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center gap-2 mt-4">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                disabled="@(isBusy || currentPage <= 1)" @onclick="PreviousPage">
+                                            Előző
+                                        </button>
+                                        <span class="small text-muted">@currentPage / @PageCount. oldal</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                disabled="@(isBusy || currentPage >= PageCount)" @onclick="NextPage">
+                                            Következő
+                                        </button>
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kiválasztott terem, kulcs, átvevő -->
+            <div class="col-12 col-xl-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-3 p-lg-4">
+                        <h5 class="fw-bold mb-1">Kulcskiadás</h5>
+                        <p class="text-muted small mb-4">A terem kiválasztása után add meg a kulcsot és az átvevőt.</p>
+
+                        @if (SelectedRoom is null)
+                        {
+                            <div class="text-center rounded-3 bg-light border p-4">
+                                <div class="fs-2 mb-2">🔑</div>
+                                <div class="fw-semibold">Még nincs kiválasztott terem</div>
+                                <div class="text-muted small mt-1">Válassz egyet a bal oldali kártyák közül!</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="rounded-3 bg-light border p-3 mb-4">
+                                <div class="small text-muted">Kiválasztott terem</div>
+                                <div class="fs-5 fw-bold text-break">@SelectedRoom.DisplayName</div>
+                                <div class="small text-muted">@SelectedRoom.Building • @SelectedRoom.Floor</div>
+                            </div>
+
+                            <div class="fw-semibold small mb-2">1. Kulcs kiválasztása</div>
+                            <div class="d-grid gap-2 mb-4">
+                                @foreach (DemoKeyReservation key in SelectedKeys)
+                                {
+                                    <button type="button"
+                                            class="btn text-start d-flex align-items-center justify-content-between gap-2 @(selectedKeyId == key.KeyId ? "btn-primary" : "btn-outline-secondary")"
+                                            disabled="@(isBusy || IsIssued(key.KeyId))"
+                                            @onclick="() => SelectKey(key.KeyId)">
+                                        <span class="text-break">@key.KeyName</span>
+                                        <span class="small text-nowrap">@(IsIssued(key.KeyId) ? "Kiadva" : "Szabad")</span>
+                                    </button>
+                                }
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="participant" class="form-label small fw-semibold">2. Átvevő oktató</label>
+                                <select id="participant" class="form-select" value="@selectedParticipantId"
+                                        @onchange="OnParticipantChanged" disabled="@(isBusy || selectedKeyId is null)">
+                                    <option value="">Válassz átvevőt...</option>
+                                    @foreach (DemoKeyReservation participant in SelectedParticipants)
+                                    {
+                                        <option value="@participant.ParticipantId">@participant.ParticipantName</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <button type="button" class="btn btn-primary w-100 py-2 fw-semibold"
+                                    disabled="@(!CanIssue)" @onclick="IssueAsync">
+                                @(isBusy ? "Feldolgozás..." : "Kulcs kiadása (demó)")
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valódi aktív kulcstranzakciók -->
+        <div class="card border-0 shadow-sm mt-4" id="active-issues">
+            <div class="card-header bg-white border-bottom p-3 p-lg-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">Kiadott kulcsok</h5>
+                        <p class="text-muted small mb-0">A ténylegesen rögzített, még vissza nem vett kulcsok.</p>
+                    </div>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis">@activeIssues.Count aktív</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (activeIssues.Count == 0)
+                {
+                    <div class="p-4 text-muted">Jelenleg nincs kiadott kulcs.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Kulcs</th>
+                                    <th>Átvevő</th>
+                                    <th>Kiadva (UTC)</th>
+                                    <th class="text-end pe-4">Művelet</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (ActiveKeyIssue issue in activeIssues)
+                                {
+                                    <tr @key="issue.TransactionId">
+                                        <td class="ps-4 fw-semibold">@issue.KeyName</td>
+                                        <td>@issue.ParticipantName</td>
+                                        <td>@issue.IssuedAtUtc.ToString("yyyy.MM.dd. HH:mm")</td>
+                                        <td class="text-end pe-4">
+                                            <button type="button" class="btn btn-sm btn-outline-success"
+                                                    disabled="@isBusy" @onclick="() => ReturnAsync(issue.KeyId)">
+                                                Visszavétel
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Jelenleg: demo terem–kulcs–oktató kapcsolatok.
+    private sealed record RoomOption(
+        Guid RoomId,
+        string FullName,
+        string Building,
+        string Floor,
+        string DisplayName,
+        List<DemoKeyReservation> Options);
+
+    private const int PageSize = 9;
+
+    private List<DemoKeyReservation> demoReservations = [];
+    private List<ActiveKeyIssue> activeIssues = [];
+    private List<RoomOption> roomCards = [];
+    private HashSet<Guid> issuedKeyIds = [];
+
+    private string searchText = string.Empty;
+    private string selectedBuilding = string.Empty;
+    private string selectedFloor = string.Empty;
+    private bool onlyAvailable;
+    private int currentPage = 1;
+
+    private Guid? selectedRoomId;
+    private Guid? selectedKeyId;
+    private string selectedParticipantId = string.Empty;
+
+    private bool isLoading = true;
+    private bool isBusy;
+    private bool lastSuccess;
+    private string? message;
+
+    private List<string> BuildingOptions => roomCards
+        .Select(room => room.Building)
+        .Distinct(StringComparer.CurrentCultureIgnoreCase)
+        .OrderBy(building => building, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+
+    private List<string> FloorOptions => roomCards
+        .Where(room => selectedBuilding.Length == 0 || room.Building == selectedBuilding)
+        .Select(room => room.Floor)
+        .Distinct(StringComparer.CurrentCultureIgnoreCase)
+        .OrderBy(floor => floor, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+
+    private List<RoomOption> FilteredRooms => roomCards
+        .Where(room => (selectedBuilding.Length == 0 || room.Building == selectedBuilding)
+            && (selectedFloor.Length == 0 || room.Floor == selectedFloor)
+            && (!onlyAvailable || AvailableKeysForRoom(room) > 0)
+            && (string.IsNullOrWhiteSpace(searchText)
+                || room.FullName.Contains(searchText.Trim(), StringComparison.CurrentCultureIgnoreCase)
+                || room.Options.Any(option => option.KeyName.Contains(searchText.Trim(), StringComparison.CurrentCultureIgnoreCase)
+                    || option.ParticipantName.Contains(searchText.Trim(), StringComparison.CurrentCultureIgnoreCase))))
+        .ToList();
+
+    private int PageCount => Math.Max(1, (FilteredRooms.Count + PageSize - 1) / PageSize);
+
+    private List<RoomOption> PagedRooms => FilteredRooms
+        .Skip((Math.Clamp(currentPage, 1, PageCount) - 1) * PageSize)
+        .Take(PageSize)
+        .ToList();
+
+    private RoomOption? SelectedRoom => roomCards.FirstOrDefault(room => room.RoomId == selectedRoomId);
+
+    private List<DemoKeyReservation> SelectedKeys => SelectedRoom?.Options
+        .GroupBy(option => option.KeyId)
+        .Select(group => group.First())
+        .OrderBy(option => option.KeyName)
+        .ToList() ?? [];
+
+    private List<DemoKeyReservation> SelectedParticipants => SelectedRoom?.Options
+        .Where(option => selectedKeyId == option.KeyId)
+        .GroupBy(option => option.ParticipantId)
+        .Select(group => group.First())
+        .OrderBy(option => option.ParticipantName)
+        .ToList() ?? [];
+
+    private DemoKeyReservation? SelectedReservation => SelectedRoom?.Options.FirstOrDefault(option =>
+        option.KeyId == selectedKeyId && option.ParticipantId == selectedParticipantId);
+
+    private bool CanIssue => !isBusy && selectedKeyId is Guid keyId && !IsIssued(keyId)
+        && SelectedReservation is not null;
+
+    private int AvailableRoomCount => roomCards.Count(room => AvailableKeysForRoom(room) > 0);
+
+    private int AvailableDemoKeyCount => demoReservations
+        .Select(option => option.KeyId)
+        .Distinct()
+        .Count(keyId => !IsIssued(keyId));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await ReloadAsync();
+        }
+        catch (Exception)
+        {
+            message = "Az adatok betöltése sikertelen. Ellenőrizd az adatbázist.";
+            lastSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // A demo szolgáltatás RoomName mezője: "Épület / Szint / Terem".
+    // A valódi foglalási integrációnál ezeket külön, típusos mezőkben érdemes átadni.
+    private static RoomOption ToRoomOption(IGrouping<Guid, DemoKeyReservation> group)
+    {
+        DemoKeyReservation first = group.First();
+        string[] parts = first.RoomName.Split(" / ", StringSplitOptions.None);
+        string building = parts.Length >= 3 ? parts[0].Trim() : "Ismeretlen épület";
+        string floor = parts.Length >= 3 ? parts[1].Trim() : "Ismeretlen szint";
+        string room = parts.Length >= 3 ? string.Join(" / ", parts.Skip(2)).Trim() : first.RoomName;
+        return new RoomOption(group.Key, first.RoomName, building, floor, room, group.ToList());
+    }
+
+    private bool IsIssued(Guid keyId)
+    {
+        return issuedKeyIds.Contains(keyId);
+    }
+
+    private int AvailableKeysForRoom(RoomOption room)
+    {
+        return room.Options.Select(option => option.KeyId).Distinct().Count(keyId => !IsIssued(keyId));
+    }
+
+    private void OnSearchChanged(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        currentPage = 1;
+    }
+
+    private void OnBuildingChanged(ChangeEventArgs args)
+    {
+        selectedBuilding = args.Value?.ToString() ?? string.Empty;
+        selectedFloor = string.Empty;
+        currentPage = 1;
+    }
+
+    private void SelectFloor(string floor)
+    {
+        selectedFloor = floor;
+        currentPage = 1;
+    }
+
+    private void OnOnlyAvailableChanged(ChangeEventArgs args)
+    {
+        onlyAvailable = args.Value is bool value && value;
+        currentPage = 1;
+    }
+
+    private void PreviousPage()
+    {
+        currentPage = Math.Max(1, currentPage - 1);
+    }
+
+    private void NextPage()
+    {
+        currentPage = Math.Min(PageCount, currentPage + 1);
+    }
+
+    private void SelectRoom(Guid roomId)
+    {
+        if (isBusy)
+        {
+            return;
+        }
+        selectedRoomId = roomId;
+        selectedKeyId = null;
+        selectedParticipantId = string.Empty;
+        message = null;
+    }
+
+    private void SelectKey(Guid keyId)
+    {
+        if (isBusy || IsIssued(keyId))
+        {
+            return;
+        }
+        selectedKeyId = keyId;
+        selectedParticipantId = string.Empty;
+    }
+
+    private void OnParticipantChanged(ChangeEventArgs args)
+    {
+        selectedParticipantId = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task<string?> CurrentUserIdAsync()
+    {
+        AuthenticationState auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        return auth.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    private async Task ReloadAsync()
+    {
+        demoReservations = await KeyService.GetDemoReservationsAsync();
+        activeIssues = await KeyService.GetActiveIssuesAsync();
+        issuedKeyIds = activeIssues.Select(issue => issue.KeyId).ToHashSet();
+        roomCards = demoReservations.GroupBy(option => option.RoomId)
+            .Select(group => ToRoomOption(group))
+            .OrderBy(room => room.Building)
+            .ThenBy(room => room.Floor)
+            .ThenBy(room => room.DisplayName)
+            .ToList();
+
+        if (selectedRoomId is not null && !roomCards.Any(room => room.RoomId == selectedRoomId))
+        {
+            selectedRoomId = null;
+        }
+        if (selectedKeyId is Guid keyId && IsIssued(keyId))
+        {
+            selectedKeyId = null;
+            selectedParticipantId = string.Empty;
+        }
+        currentPage = Math.Clamp(currentPage, 1, PageCount);
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (isBusy)
+        {
+            return;
+        }
+        isBusy = true;
+        try
+        {
+            await ReloadAsync();
+        }
+        catch (Exception)
+        {
+            lastSuccess = false;
+            message = "A frissítés nem sikerült.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task IssueAsync()
+    {
+        DemoKeyReservation? selection = SelectedReservation;
+        if (!CanIssue || selection is null)
+        {
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            KeyOperationResult result = await KeyService.IssueAsync(selection, await CurrentUserIdAsync());
+            lastSuccess = result.Success;
+            message = result.Message;
+            if (result.Success)
+            {
+                selectedKeyId = null;
+                selectedParticipantId = string.Empty;
+            }
+            await ReloadAsync();
+        }
+        catch (Exception)
+        {
+            lastSuccess = false;
+            message = "A kulcskiadás nem sikerült. Próbáld újra, vagy ellenőrizd az adatbázist.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ReturnAsync(Guid keyId)
+    {
+        if (isBusy)
+        {
+            return;
+        }
+        isBusy = true;
+        try
+        {
+            KeyOperationResult result = await KeyService.ReturnAsync(keyId, await CurrentUserIdAsync());
+            lastSuccess = result.Success;
+            message = result.Message;
+            await ReloadAsync();
+        }
+        catch (Exception)
+        {
+            lastSuccess = false;
+            message = "A kulcs visszavétele nem sikerült. Próbáld újra.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+}

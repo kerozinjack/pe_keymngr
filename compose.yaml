@@ -10,6 +10,8 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/"]
       interval: 30s

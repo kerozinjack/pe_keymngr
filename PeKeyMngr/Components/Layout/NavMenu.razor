@@ -1,5 +1,5 @@
-﻿@implements IDisposable
-
+﻿
+@implements IDisposable
 @inject NavigationManager NavigationManager
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -8,118 +8,245 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox"
+       title="Navigation menu"
+       class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<div class="nav-scrollable"
+     onclick="document.querySelector('.navbar-toggler').click()">
+
     <nav class="nav flex-column">
-        @* Base menu item visible to everyone *@
+
+        @* KEZDŐLAP - Mindenki számára elérhető *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Kezdőlap
+            <NavLink class="nav-link"
+                     href=""
+                     Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu"
+                      aria-hidden="true"></span>
+                Kezdőlap
             </NavLink>
         </div>
 
-        <AuthorizeView>
+        <AuthorizeView Context="userContext">
+
             <Authorized>
-                @* Only users with the Admin role can see these menu items *@
-                <AuthorizeView Policy="CanAccessAdminPages" Context="adminContext">
+
+                @* ADMINISZTRÁCIÓ - Admin szerepkör       *@
+
+                <AuthorizeView Policy="CanAccessAdminPages"
+                               Context="adminContext">
                     <Authorized>
+
                         <div class="nav-item px-3">
-                            <span class="nav-link text-uppercase small fw-bold">Adminisztráció</span>
+                            <span class="nav-link text-uppercase small fw-bold">
+                                Adminisztráció
+                            </span>
                         </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="rooms">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Termek
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Termek
                             </NavLink>
                         </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="building">
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Épületvizualizáció
+                            </NavLink>
+                        </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="equipment">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Felszerelések
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Felszerelések
                             </NavLink>
                         </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="keys">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Kulcsok
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Kulcsok
                             </NavLink>
                         </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="maintenancewindows">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Karbantartások
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Karbantartások
                             </NavLink>
                         </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="roles">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Szerepkörök
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Szerepkörök
                             </NavLink>
                         </div>
+
                     </Authorized>
                 </AuthorizeView>
-                @* Only users with the Teacher role can see these menu items *@
-                <AuthorizeView Policy="CanTeacherAdminPages" Context="teacherContext">
+
+                @* OKTATÓI FUNKCIÓK - Teacher szerepkör   *@
+
+                <AuthorizeView Policy="CanAccessTeacherPages"
+                               Context="teacherContext">
                     <Authorized>
+
                         <div class="nav-item px-3">
-                            <span class="nav-link text-uppercase small fw-bold">Oktatói funkciók</span>
+                            <span class="nav-link text-uppercase small fw-bold">
+                                Oktatói funkciók
+                            </span>
                         </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="reservations">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Foglalások
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Foglalások
                             </NavLink>
                         </div>
+
                     </Authorized>
                 </AuthorizeView>
-                @* Only users with the Operations Director role can see these menu items *@
-                <AuthorizeView Policy="CanAccessOperationsDirectorPages" Context="operationsContext">
+
+                @* PORTASZOLGÁLAT - Janitor szerepkör     *@
+
+                <AuthorizeView Policy="CanAccessJanitorPages"
+                               Context="janitorContext">
                     <Authorized>
+
                         <div class="nav-item px-3">
-                            <span class="nav-link text-uppercase small fw-bold">Üzemeltetés</span>
+                            <span class="nav-link text-uppercase small fw-bold">
+                                Portaszolgálat
+                            </span>
                         </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="keymanagement">
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Kulcskezelés
+                            </NavLink>
+                        </div>
+
+                    </Authorized>
+                </AuthorizeView>
+
+                @* ÜZEMELTETÉS - Operations Director     *@
+
+                <AuthorizeView Policy="CanAccessOperationsDirectorPages"
+                               Context="operationsContext">
+                    <Authorized>
+
+                        <div class="nav-item px-3">
+                            <span class="nav-link text-uppercase small fw-bold">
+                                Üzemeltetés
+                            </span>
+                        </div>
+
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="auditlogs">
-                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Auditnapló
+                                <span class="bi bi-list-nested-nav-menu"
+                                      aria-hidden="true"></span>
+                                Auditnapló
                             </NavLink>
                         </div>
+
                     </Authorized>
                 </AuthorizeView>
-                @* Visible to all authenticated users *@
+
+
+                @* KÖZÖS FUNKCIÓK - Bejelentkezett userek *@
+
+                <div class="nav-item px-3">
+                    <span class="nav-link text-uppercase small fw-bold">
+                        Egyéb funkciók
+                    </span>
+                </div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="issuetickets">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Hibajegyek
+                        <span class="bi bi-list-nested-nav-menu"
+                              aria-hidden="true"></span>
+                        Hibajegyek
                     </NavLink>
                 </div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="auth">
-                        <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Autentikáció
+                        <span class="bi bi-lock-nav-menu"
+                              aria-hidden="true"></span>
+                        Autentikáció
                     </NavLink>
                 </div>
+
+
+                @* FELHASZNÁLÓI FIÓK                     *@
+
+                <div class="nav-item px-3">
+                    <span class="nav-link text-uppercase small fw-bold">
+                        Fiók
+                    </span>
+                </div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                        <span class="bi bi-person-fill-nav-menu"
+                              aria-hidden="true"></span>
+                        @userContext.User.Identity?.Name
                     </NavLink>
                 </div>
+
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link text-danger">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Kijelentkezés
+                        <input type="hidden"
+                               name="ReturnUrl"
+                               value="@currentUrl" />
+
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu"
+                                  aria-hidden="true"></span>
+                            Kijelentkezés
                         </button>
                     </form>
                 </div>
+
             </Authorized>
+
             <NotAuthorized>
-                @* Visible only to users who are not signed in *@
+
+                @* NEM BEJELENTKEZETT FELHASZNÁLÓK *@
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Regisztráció
+                        <span class="bi bi-person-nav-menu"
+                              aria-hidden="true"></span>
+                        Regisztráció
                     </NavLink>
                 </div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Bejelentkezés
+                        <span class="bi bi-person-badge-nav-menu"
+                              aria-hidden="true"></span>
+                        Bejelentkezés
                     </NavLink>
                 </div>
+
             </NotAuthorized>
+
         </AuthorizeView>
+
     </nav>
 </div>
 
@@ -128,13 +255,18 @@
 
     protected override void OnInitialized()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        currentUrl = NavigationManager.ToBaseRelativePath(
+            NavigationManager.Uri);
+
         NavigationManager.LocationChanged += OnLocationChanged;
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private void OnLocationChanged(
+        object? sender,
+        LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+
         StateHasChanged();
     }
 

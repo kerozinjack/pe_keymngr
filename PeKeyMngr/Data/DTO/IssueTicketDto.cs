@@ -1,4 +1,5 @@
 using PeKeyMngr.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace PeKeyMngr.Data.DTO
 {
@@ -7,6 +8,7 @@ namespace PeKeyMngr.Data.DTO
         public string TicketId { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public string AffectedRoom { get; set; } = string.Empty;
+        [StringLength(200, ErrorMessage = "A probléma leírása 50 és 200 karakter között kell legyen", MinimumLength = 20)]
         public string IssueDescription { get; set; } = string.Empty;
 
         public IssueTicket? ToIssueTicket(ApplicationUser user, ApplicationDbContext ctx)
