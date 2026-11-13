@@ -1,0 +1,62 @@
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDisposable
+
+@if (displayMessages.Length > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <ul class="mb-0">
+            @foreach (var message in displayMessages)
+            {
+                <li>@message</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    private string[] validationMessages = [];
+    private string[] displayMessages = [];
+
+    [CascadingParameter]
+    private EditContext? EditContext { get; set; }
+
+    [Parameter]
+    public IEnumerable<string>? Messages { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged += OnValidationStateChanged;
+            UpdateMessages();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        displayMessages = Messages?.ToArray() ?? validationMessages;
+    }
+
+    private void OnValidationStateChanged(object? sender, ValidationStateChangedEventArgs eventArgs)
+    {
+        UpdateMessages();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateMessages()
+    {
+        validationMessages = EditContext?.GetValidationMessages().ToArray() ?? [];
+        if (Messages is null)
+        {
+            displayMessages = validationMessages;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged -= OnValidationStateChanged;
+        }
+    }
+}

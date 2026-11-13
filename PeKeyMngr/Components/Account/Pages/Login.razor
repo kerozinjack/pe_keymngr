@@ -1,4 +1,4 @@
-﻿@page "/Account/Login"
+@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
@@ -11,7 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Bejelentkezés</PageTitle>
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -28,7 +28,7 @@
                             <div class="mb-4">
                                 <h1 class="fw-bold mb-2">Üdv újra!</h1>
                                 <p class="text-secondary mb-0">
-                                    Jelentkezz be a fiókodba a folytatáshoz.
+                                    Jelentkezzen be a fiókjába a folytatáshoz.
                                 </p>
                             </div>
 
@@ -41,7 +41,7 @@
 
                                 <DataAnnotationsValidator />
 
-                                <ValidationSummary class="text-danger" role="alert" />
+                                <AccountErrorList />
 
                                 <!-- E-mail -->
                                 <div class="mb-3">
@@ -115,7 +115,7 @@
                                     <div class="mb-2">
                                         <a href="Account/ForgotPassword"
                                            class="text-decoration-none">
-                                            Elfelejtetted a jelszavad?
+                                            Elfelejtette a jelszavát?
                                         </a>
                                     </div>
 
@@ -171,7 +171,7 @@
     {
         if (!string.IsNullOrEmpty(Input.Passkey?.Error))
         {
-            errorMessage = $"Error: {Input.Passkey.Error}";
+            errorMessage = $"Hiba: {Input.Passkey.Error}";
             return;
         }
 
@@ -212,18 +212,20 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            errorMessage = "Hiba: Érvénytelen bejelentkezési kísérlet.";
         }
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
+        [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
+        [Display(Name = "E-mail-cím")]
         public string Email { get; set; } = "";
 
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [DataType(DataType.Password)]
+        [Display(Name = "Jelszó")]
         public string Password { get; set; } = "";
 
         [Display(Name = "Remember me?")]

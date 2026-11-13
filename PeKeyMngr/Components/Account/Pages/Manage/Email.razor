@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/Email"
+@page "/Account/Manage/Email"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -30,12 +30,12 @@
 
             <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
                 <DataAnnotationsValidator />
-                <ValidationSummary class="text-danger" role="alert" />
+                <AccountErrorList />
 
                 @if (isEmailConfirmed)
                 {
                     <div class="mb-4">
-                        <label for="email" class="form-label fw-semibold">Current email</label>
+                        <label for="email" class="form-label fw-semibold">Jelenlegi e-mail-cím</label>
                         <div class="input-group">
                             <input type="text" value="@email" id="email" class="form-control" placeholder="Adja meg az email címét" disabled />
                             <span class="input-group-text text-success fw-bold">✓</span>
@@ -46,7 +46,7 @@
                 else
                 {
                     <div class="mb-4">
-                        <label for="email" class="form-label fw-semibold">Current email</label>
+                        <label for="email" class="form-label fw-semibold">Jelenlegi e-mail-cím</label>
                         <input type="text" value="@email" id="email" class="form-control mb-2" placeholder="Adja meg az email címét" disabled />
                         <button type="submit" class="btn btn-link px-0" form="send-verification-form">
                             Hitelesítő email küldése
@@ -55,7 +55,7 @@
                 }
 
                 <div class="mb-4">
-                    <label for="Input.NewEmail" class="form-label fw-semibold">New email</label>
+                    <label for="Input.NewEmail" class="form-label fw-semibold">Új e-mail-cím</label>
                     <InputText @bind-Value="Input.NewEmail"
                                id="Input.NewEmail"
                                class="form-control"
@@ -155,8 +155,8 @@
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
+        [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
         [Display(Name = "Új email")]
         public string? NewEmail { get; set; }
     }

@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/RenamePasskey/{Id}"
+@page "/Account/Manage/RenamePasskey/{Id}"
 
 @using PeKeyMngr.Data
 @using System.ComponentModel.DataAnnotations
@@ -19,7 +19,7 @@
         <h4>Adj meg egy nevet a passkey-hez!</h4>
     }
     <hr />
-    <ValidationSummary class="text-danger" role="alert" />
+    <AccountErrorList />
     <div class="form-floating mb-3">
         <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" aria-required="true" placeholder="Saját passkey" />
         <label for="Input.Name" class="form-label">Passkey neve</label>
@@ -88,8 +88,9 @@
 
     private sealed class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
         [StringLength(200, ErrorMessage = "A passkey neve legfeljebb {1} karakter hosszú lehet.")]
+        [Display(Name = "Passkey neve")]
         public string Name { get; set; } = "";
     }
 }

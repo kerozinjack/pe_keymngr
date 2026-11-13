@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/Passkeys"
+@page "/Account/Manage/Passkeys"
 
 @using PeKeyMngr.Data
 @using Microsoft.AspNetCore.Identity
@@ -32,7 +32,7 @@
                             <div>
                                 <input type="hidden" name="CredentialId" value="@credentialId" />
                                 <button type="submit" name="Action" value="rename" class="btn btn-primary" title="Passkey átnevezése">Átnevezés</button>
-                                <button type="submit" name="Action" value="delete" class="btn btn-danger" title="Passkey eltávolítása a fiókodból">Törlés</button>
+                                <button type="submit" name="Action" value="delete" class="btn btn-danger" title="Passkey eltávolítása a fiókjából">Törlés</button>
                             </div>
                         </form>
                     </td>
@@ -43,14 +43,14 @@
 }
 else
 {
-    <p>Nincs regisztrált passkey-d.</p>
+    <p>Nincs regisztrált passkey-je.</p>
 }
 
 <form @formname="add-passkey" @onsubmit="AddPasskey" method="post">
     <AntiforgeryToken />
     @if (currentPasskeys is { Count: >= MaxPasskeyCount })
     {
-        <p class="text-danger">Elérted a regisztrálható passkey-k maximális számát. Új hozzáadása előtt törölj egy meglévőt.</p>
+        <p class="text-danger">Elérte a regisztrálható passkey-k maximális számát. Új hozzáadása előtt töröljön egy meglévőt.</p>
     }
     else
     {
@@ -112,7 +112,7 @@ else
 
         if (currentPasskeys!.Count >= MaxPasskeyCount)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Hiba: Elérted a regisztrálható passkey-k maximális számát.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Hiba: Elérte a regisztrálható passkey-k maximális számát.", HttpContext);
             return;
         }
 
@@ -126,7 +126,7 @@ else
         var addPasskeyResult = await UserManager.AddOrUpdatePasskeyAsync(user, attestationResult.Passkey);
         if (!addPasskeyResult.Succeeded)
         {
-            RedirectManager.RedirectToCurrentPageWithStatus("Hiba: A passkey-t nem sikerült hozzáadni a fiókodhoz.", HttpContext);
+            RedirectManager.RedirectToCurrentPageWithStatus("Hiba: A passkey-t nem sikerült hozzáadni a fiókjához.", HttpContext);
             return;
         }
 
