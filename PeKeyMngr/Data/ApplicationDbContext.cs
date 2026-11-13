@@ -4,7 +4,9 @@ using PeKeyMngr.Models;
 
 namespace PeKeyMngr.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+    public class ApplicationDbContext(
+       DbContextOptions<ApplicationDbContext> options, AuditActorProvider auditActorProvider)
+       : IdentityDbContext<ApplicationUser>(options)
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 #pragma warning disable CS0108 // Member hides inherited member; missing new keyword
@@ -20,6 +22,27 @@ namespace PeKeyMngr.Data
 #pragma warning restore CS0108 // Member hides inherited member; missing new keyword
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            List<AuditLog> auditEntries = AuditChangeCollector.Collect(
+                this, auditActorProvider.GetActorFromRequest());
+            AuditLogs.AddRange(auditEntries);
+            //EF core mentes
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            //bejelentkezett felhasznalo.
+            string actor = await auditActorProvider.GetActorAsync();
+            // esemeny
+            List<AuditLog> auditEntries = await AuditChangeCollector.CollectAsync(
+                this, actor, cancellationToken);
+            AuditLogs.AddRange(auditEntries);
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -28,7 +51,7 @@ namespace PeKeyMngr.Data
                 .WithMany()
                 .UsingEntity(j => j.ToTable("KeyRole"));
             builder.Entity<Key>()
-                .HasMany(k=>k.AssignedRooms)
+                .HasMany(k => k.AssignedRooms)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("KeyRoom"));
             builder.Entity<Room>()
@@ -43,7 +66,7 @@ namespace PeKeyMngr.Data
                 .HasMany(r => r.Equipments)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("ReservationEquipment"));
-            
+
             builder.Entity<AuditLog>()
                 .Property(x => x.LogId)
                 .HasConversion(

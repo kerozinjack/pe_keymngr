@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 @page "/Account/LoginWith2fa"
 
 @using System.ComponentModel.DataAnnotations
@@ -101,3 +102,120 @@
         public bool RememberMachine { get; set; }
     }
 }
+=======
+﻿@page "/Account/LoginWith2fa"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using PeKeyMngr.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<LoginWith2fa> Logger
+@inject AuditLogWriter AuditWriter
+
+<PageTitle>Kétlépcsős hitelesítés</PageTitle>
+
+<h1>Kétlépcsős hitelesítés</h1>
+<hr />
+<StatusMessage Message="@message" />
+<p>A bejelentkezésedet egy hitelesítő alkalmazás védi. Add meg alább az alkalmazás által generált kódot.</p>
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <input type="hidden" name="RememberMe" value="@RememberMe" />
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" />
+                <label for="Input.TwoFactorCode" class="form-label">Hitelesítési kód</label>
+                <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
+            </div>
+            <div class="checkbox mb-3">
+                <label for="remember-machine" class="form-label">
+                    <InputCheckbox @bind-Value="Input.RememberMachine" />
+                    Emlékezzen erre az eszközre
+                </label>
+            </div>
+            <div>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Bejelentkezés</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+<p>
+    Nem férsz hozzá a hitelesítő eszközödhöz? Ebben az esetben
+    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">helyreállítási kóddal is bejelentkezhetsz</a>.
+</p>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    private bool RememberMe { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        // Ellenőrizzük, hogy a felhasználó először megadta-e a felhasználónevét és a jelszavát.
+        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
+            throw new InvalidOperationException("Nem sikerült betölteni a kétlépcsős hitelesítéshez tartozó felhasználót.");
+    }
+
+    // A normál Login-oldal a 2FA szükségességekor ide irányít.
+    // A sikeres belépést CSAK a tényleges 2FA/Recovery siker után írjuk be.
+    private async Task OnValidSubmitAsync()
+    {
+        var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var userId = await UserManager.GetUserIdAsync(user);
+
+        // Az Identity által visszaadott eredmény alapján készítünk
+        // egy-egy rövid, közérthető eseménymondatot.
+        if (result.Succeeded)
+        {
+            await AuditWriter.WriteAsync("Hitelesítés", $"Felhasználó: {user.UserName ?? userId} kétlépcsős hitelesítéssel bejelentkezett.");
+            Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó kétlépcsős hitelesítéssel bejelentkezett.", userId);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            await AuditWriter.WriteAsync(
+                "Hitelesítés", $"Sikertelen 2FA (zárolt fiók): {user.UserName ?? userId}.",
+                PeKeyMngr.Models.Severity.Warn);
+            Logger.LogWarning("A(z) '{UserId}' azonosítójú felhasználó fiókját zárolták.", userId);
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            await AuditWriter.WriteAsync(
+                "Hitelesítés", $"Sikertelen 2FA-kísérlet: {user.UserName ?? userId}.",
+                PeKeyMngr.Models.Severity.Warn);
+            Logger.LogWarning("Érvénytelen hitelesítési kódot adtak meg a(z) '{UserId}' azonosítójú felhasználóhoz.", userId);
+            message = "Hiba: Érvénytelen hitelesítési kód.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(7, ErrorMessage = "A(z) {0} hossza legalább {2}, legfeljebb {1} karakter lehet.", MinimumLength = 6)]
+        [DataType(DataType.Text)]
+        [Display(Name = "Hitelesítési kód")]
+        public string? TwoFactorCode { get; set; }
+
+        [Display(Name = "Emlékezzen erre az eszközre")]
+        public bool RememberMachine { get; set; }
+    }
+}
+>>>>>>> Stashed changes

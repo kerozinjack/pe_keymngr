@@ -1,32 +1,173 @@
 @page "/auditlogs"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
-@using PeKeyMngr.Models
 @using PeKeyMngr.Data
-@implements IAsyncDisposable
-@inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
-
+@using PeKeyMngr.Models
 @attribute [Authorize(Policy = "CanAccessOperationsDirectorPages")]
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Eseménynapló</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="mb-1">Eseménynapló</h2>
+            <p class="text-muted mb-0">Ki, mikor és mit csinált a rendszerben?</p>
+        </div>
+        <button type="button" class="btn btn-outline-secondary" @onclick="LoadAsync" disabled="@isLoading">
+            Frissítés
+        </button>
+    </div>
 
-<QuickGrid Class="table" Items="context.AuditLogs">
-    <PropertyColumn Property="auditlog => auditlog.Date"></PropertyColumn>
-    <PropertyColumn Property="auditlog => auditlog.Severity"/>
-    <PropertyColumn Property="auditlog => auditlog.Subsystem"/>
-    <PropertyColumn Property="auditlog => auditlog.Text"/>
-</QuickGrid>
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-9">
+                    <label for="auditSearch" class="form-label fw-semibold">Keresés az események között</label>
+                    <input id="auditSearch" class="form-control" @bind="searchTerm"
+                           placeholder="Felhasználó, terem, kulcs, művelet..." />
+                </div>
+                <div class="col-12 col-md-3">
+                    <button type="button" class="btn btn-primary w-100" @onclick="SearchAsync" disabled="@isLoading">
+                        Keresés
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-@code {
-    private ApplicationDbContext context = default!;
-
-    protected override void OnInitialized()
+    @if (!string.IsNullOrEmpty(errorMessage))
     {
-        context = DbFactory.CreateDbContext();
+        <div class="alert alert-danger">@errorMessage</div>
     }
 
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-nowrap">Időpont</th>
+                        <th>Terület</th>
+                        <th>Esemény</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (isLoading)
+                    {
+                        <tr><td colspan="3" class="text-center py-4">Betöltés...</td></tr>
+                    }
+                    else if (entries.Count == 0)
+                    {
+                        <tr><td colspan="3" class="text-center text-muted py-4">Nincs megjeleníthető esemény.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (AuditLog entry in entries)
+                        {
+                            <tr>
+                                <td class="text-nowrap small">@ToHungarianTime(entry.Date)</td>
+                                <td class="small">@entry.Subsystem</td>
+                                <td>@entry.Text</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <span class="small text-muted">@totalCount esemény · @(pageIndex). / @PageCount oldal</span>
+            <div class="btn-group" role="group" aria-label="Lapozás">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PreviousAsync"
+                        disabled="@(isLoading || pageIndex <= 1)">Előző</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="NextAsync"
+                        disabled="@(isLoading || pageIndex >= PageCount)">Következő</button>
+            </div>
+        </div>
+    </div>
+    <p class="small text-muted mt-2">Az időpontok magyar helyi idő szerint jelennek meg.</p>
+</div>
+
+@code {
+    // A felület csak OLVAS: nincs szerkesztés és törlés
+    private const int PageSize = 25;
+    private static readonly TimeZoneInfo LocalZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Budapest");
+    private List<AuditLog> entries = [];
+    private string searchTerm = string.Empty;
+    private string? errorMessage;
+    private bool isLoading;
+    private int pageIndex = 1;
+    private int totalCount;
+    private int PageCount => Math.Max(1, (totalCount + PageSize - 1) / PageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    // A keresés, lapozás és frissítés is ezt a közös lekérdezést használja.
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            await using ApplicationDbContext db = await DbFactory.CreateDbContextAsync();
+            // AsNoTracking: csak olvasunk, nem akarjuk módosítani a naplókat.
+            IQueryable<AuditLog> query = db.AuditLogs.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                string term = searchTerm.Trim();
+                query = query.Where(log => log.Text.Contains(term) || log.Subsystem.Contains(term));
+            }
+
+            totalCount = await query.CountAsync();
+            pageIndex = Math.Min(pageIndex, PageCount);
+            entries = await query
+                .OrderByDescending(log => log.Date)
+                .ThenByDescending(log => log.LogId)
+                .Skip((pageIndex - 1) * PageSize)
+                .Take(PageSize)
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            errorMessage = "Nem sikerült betölteni az eseménynaplót.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task PreviousAsync()
+    {
+        if (pageIndex > 1)
+        {
+            pageIndex--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task NextAsync()
+    {
+        if (pageIndex < PageCount)
+        {
+            pageIndex++;
+            await LoadAsync();
+        }
+    }
+
+    private static string ToHungarianTime(DateTime utc)
+    {
+        DateTime utcDate = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(utcDate, LocalZone).ToString("yyyy.MM.dd. HH:mm:ss");
+    }
 }
