@@ -180,13 +180,15 @@
             return;
         }
 
-        SignInResult result;
+        SignInResult result = default!;
         string? passkeyJson = Input.Passkey?.CredentialJson;
         bool usedPasskey = !string.IsNullOrEmpty(passkeyJson);
         if (usedPasskey)
         {
-            // When performing passkey sign-in, don't perform form validation.
-            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            if(Input.Passkey is not null && Input.Passkey.CredentialJson is not null){
+                // When performing passkey sign-in, don't perform form validation.
+                result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            }
         }
         else
         {
