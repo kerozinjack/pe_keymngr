@@ -1,4 +1,4 @@
-﻿@page "/Account/Register"
+@page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -14,8 +14,6 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-
-<PageTitle>Register</PageTitle>
 
 <PageTitle>Regisztráció</PageTitle>
 
@@ -34,11 +32,11 @@
                             <div class="mb-4">
                                 <h1 class="fw-bold mb-2">Fiók létrehozása</h1>
                                 <p class="text-secondary mb-0">
-                                    Regisztrálj, hogy elkezdhesd használni a PeKeyMngr-t.
+                                    Regisztráljon, hogy elkezdhesse használni a PeKeyMngr-t.
                                 </p>
                             </div>
 
-                            <StatusMessage Message="@Message" />
+                            <AccountErrorList Messages="@(identityErrors?.Select(error => error.Description))" />
 
                             <EditForm Model="Input"
                                       method="post"
@@ -47,7 +45,7 @@
 
                                 <DataAnnotationsValidator />
 
-                                <ValidationSummary class="text-danger" role="alert" />
+                                <AccountErrorList />
 
                                 <!-- E-mail -->
                                 <div class="mb-3">
@@ -78,7 +76,7 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Hozz létre egy jelszót" />
+                                               placeholder="Hozzon létre egy jelszót" />
 
                                     <ValidationMessage For="() => Input.Password"
                                                        class="text-danger small mt-1" />
@@ -96,7 +94,7 @@
                                                class="form-control form-control-lg"
                                                autocomplete="new-password"
                                                aria-required="true"
-                                               placeholder="Erősítsd meg a jelszavad" />
+                                               placeholder="Erősítse meg a jelszavát" />
 
                                     <ValidationMessage For="() => Input.ConfirmPassword"
                                                        class="text-danger small mt-1" />
@@ -111,7 +109,7 @@
                                 <!-- Bejelentkezési link -->
                                 <div class="text-center mt-4">
                                     <span class="text-secondary">
-                                        Már van fiókod?
+                                        Már van fiókja?
                                     </span>
 
                                     <a href="Account/Login"
@@ -142,8 +140,6 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
-
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
     protected override void OnInitialized()
     {
@@ -213,20 +209,20 @@
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
-        [Display(Name = "Email")]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
+        [EmailAddress(ErrorMessage = "Az e-mail-cím formátuma érvénytelen.")]
+        [Display(Name = "E-mail-cím")]
         public string Email { get; set; } = "";
 
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "A(z) {0} megadása kötelező.")]
+        [StringLength(100, ErrorMessage = "A(z) {0} hossza legalább {2}, legfeljebb {1} karakter lehet.", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        [Display(Name = "Password")]
+        [Display(Name = "Jelszó")]
         public string Password { get; set; } = "";
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        [Display(Name = "Jelszó megerősítése")]
+        [Compare("Password", ErrorMessage = "A jelszó és a megerősítése nem egyezik.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }

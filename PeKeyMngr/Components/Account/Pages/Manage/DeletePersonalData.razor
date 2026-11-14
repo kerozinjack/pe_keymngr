@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/DeletePersonalData"
+@page "/Account/Manage/DeletePersonalData"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
@@ -9,11 +9,11 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
-<PageTitle>Delete Personal Data</PageTitle>
+<PageTitle>Személyes adatok törlése</PageTitle>
 
 <StatusMessage Message="@message" />
 
-<h3>Delete Personal Data</h3>
+<h3>Személyes adatok törlése</h3>
 
 <div class="alert alert-warning" role="alert">
     <p>
@@ -24,12 +24,12 @@
 <div>
     <EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
         <DataAnnotationsValidator />
-        <ValidationSummary class="text-danger" role="alert" />
+        <AccountErrorList />
         @if (requirePassword)
         {
             <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Kérlek add meg a jelszavad!." />
-                <label for="Input.Password" class="form-label">Password</label>
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Kérjük, adja meg jelszavát." />
+                <label for="Input.Password" class="form-label">Jelszó</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
         }

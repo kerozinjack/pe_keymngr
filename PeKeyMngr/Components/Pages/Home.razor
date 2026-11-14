@@ -1,8 +1,12 @@
-﻿@page "/"
+@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
+@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data
 @rendermode InteractiveServer
 @inject NavigationManager Nav
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <PageTitle>Kezdőlap – Terem- és kulcskezelő rendszer</PageTitle>
 
@@ -29,43 +33,34 @@
                 </div>
             </div>
 
-            <!-- IDEIGLENES SZEREPKÖRVÁLASZTÓ -->
-            <div class="card shadow-sm border-warning mb-4">
-                <div class="card-body p-3">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-md">
-                            <h5 class="fw-semibold mb-1">
-                                Tesztelési szerepkörválasztó
-                            </h5>
-                            <p class="text-muted small mb-0">
-                                Válassz egy szerepkört a hozzá tartozó kezdőlap megtekintéséhez.
-                            </p>
-                        </div>
-
-                        <div class="col-12 col-md-5 col-lg-4">
-                            <select class="form-select" @bind="SelectedRole">
-                                <option value="Oktató / Igénylő">Oktató / Igénylő</option>
-                                <option value="Portás / Operátor">Portás / Operátor</option>
-                                <option value="Adminisztrátor">Adminisztrátor</option>
-                                <option value="Üzemeltetési igazgató">Üzemeltetési igazgató</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-warning small mb-0 mt-3 py-2">
-                        Ez a választó kizárólag tesztelési célokat szolgál.
-                        A tényleges jogosultságkezelés még nincs bekötve.
-                    </div>
-                </div>
-            </div>
-
             <!-- AKTUÁLIS SZEREPKÖR -->
-            <div class="mb-3">
-                <h5 class="fw-semibold mb-1">@SelectedRole</h5>
-                <p class="text-muted small mb-0">
-                    A kiválasztott szerepkörhöz tartozó funkciók.
-                </p>
-            </div>
+            @if (!IsRoleLoaded)
+            {
+                <div class="alert alert-info">Felhasználói szerepkör betöltése...</div>
+            }
+            else if (SelectedRole is null)
+            {
+                <div class="alert alert-warning">
+                    A bejelentkezett felhasználóhoz nem található támogatott szerepkör.
+                    Ellenőrizd a felhasználó szerepkör-hozzárendelését az adatbázisban.
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <h5 class="fw-semibold mb-1">@SelectedRole</h5>
+                    <p class="text-muted small mb-0">
+                        @if (ActualRole == SelectedRole)
+                        {
+                            <span>A bejelentkezett felhasználóhoz tartozó funkciók.</span>
+                        }
+                        else
+                        {
+                            <span>Tesztelésre kiválasztott nézet (nem a saját szerepköröd).</span>
+                        }
+                    </p>
+                </div>
+            }
 
             <div class="row g-4">
 
@@ -95,25 +90,295 @@
                 <!-- PORTÁS -->
                 @if (SelectedRole == "Portás / Operátor")
                 {
-                    <div class="col-12 col-md-6 col-xl-4">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-body p-4">
-                                <p class="text-muted small mb-4">
-                                    Kulcskiadással, kulcsátvétellel és hibabejelentésekkel kapcsolatos feladatok.
-                                </p>
+                    <div class="col-12">
 
-                                <div class="d-grid gap-2">
-                                    <a href="/issuetickets" class="btn btn-outline-success">
-                                        Hibajegyek kezelése
-                                    </a>
-                                    <span class="text-muted small text-center">
-                                        Kulcskiadás és -átvétel – fejlesztés alatt
+                        <!-- PORTÁS DASHBOARD FEJLÉC -->
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <h4 class="fw-bold mb-1">Kulcskezelési áttekintés</h4>
+                                <p class="text-muted mb-0">
+                                    Kulcskiadások, visszavételek és aktuális feladatok kezelése.
+                                </p>
+                            </div>
+
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2">
+                                Portás / Operátor
+                            </span>
+                        </div>
+
+                        <!--
+                            IDEIGLENES TESZTADATOK
+
+                            TODO:
+                            A statisztikákat később a KeyTransaction és Key
+                            adatmodellek alapján, adatbázisból kell lekérdezni.
+                        -->
+                        <!-- STATISZTIKAI KÁRTYÁK -->
+                        <div class="row g-3 mb-4">
+
+                            <div class="col-6 col-xl-3">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-3 border-start border-4 border-primary rounded">
+                                        <div class="text-muted small mb-2">
+                                            Kiadott kulcsok
+                                        </div>
+                                        <div class="fs-3 fw-bold text-dark">
+                                            12
+                                            <span class="fs-6 text-muted fw-normal">/ 48</span>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Összes kulcsból
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-xl-3">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-3 border-start border-4 border-success rounded">
+                                        <div class="text-muted small mb-2">
+                                            Elérhető kulcsok
+                                        </div>
+                                        <div class="fs-3 fw-bold text-dark">
+                                            36
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Kiadásra rendelkezésre áll
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-xl-3">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-3 border-start border-4 border-danger rounded">
+                                        <div class="text-muted small mb-2">
+                                            Késésben lévő kulcsok
+                                        </div>
+                                        <div class="fs-3 fw-bold text-danger">
+                                            2
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Visszavételre vár
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-xl-3">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-3 border-start border-4 border-warning rounded">
+                                        <div class="text-muted small mb-2">
+                                            Mai visszavételek
+                                        </div>
+                                        <div class="fs-3 fw-bold text-dark">
+                                            8
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            Sikeresen visszavett kulcs
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- AKTÍV KULCSKIADÁSOK -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white border-bottom py-3 px-4">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Aktív kulcskiadások</h5>
+                                        <p class="text-muted small mb-0">
+                                            Jelenleg kiadott, visszavételre váró kulcsok.
+                                        </p>
+                                    </div>
+
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                                        Tesztadatok
                                     </span>
                                 </div>
                             </div>
+
+                            <div class="card-body p-0">
+
+                                <!--
+                                    TODO:
+                                    A táblázat tartalmát később az adatbázisban
+                                    szereplő aktív kulcstranzakciók alapján kell
+                                    dinamikusan megjeleníteni.
+                                -->
+
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="ps-4">Kulcs</th>
+                                                <th>Átvevő</th>
+                                                <th>Kiadás ideje</th>
+                                                <th>Állapot</th>
+                                                <th class="text-end pe-4">Művelet</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <tr>
+                                                <td class="ps-4 fw-semibold">I/102</td>
+                                                <td>Kovács Péter</td>
+                                                <td>08:15</td>
+                                                <td>
+                                                    <span class="badge bg-success-subtle text-success-emphasis">
+                                                        Kiadva
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary"
+                                                            disabled>
+                                                        Visszavétel
+                                                    </button>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td class="ps-4 fw-semibold">I/205</td>
+                                                <td>Nagy Anna</td>
+                                                <td>07:30</td>
+                                                <td>
+                                                    <span class="badge bg-danger-subtle text-danger-emphasis">
+                                                        Késésben
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary"
+                                                            disabled>
+                                                        Visszavétel
+                                                    </button>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td class="ps-4 fw-semibold">I/301</td>
+                                                <td>Szabó Gábor</td>
+                                                <td>09:10</td>
+                                                <td>
+                                                    <span class="badge bg-success-subtle text-success-emphasis">
+                                                        Kiadva
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary"
+                                                            disabled>
+                                                        Visszavétel
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+
+                            <div class="card-footer bg-white border-top px-4 py-3">
+                                <span class="text-muted small">
+                                    A kulcskezelési műveletek és a PIN-kódos jóváhagyás fejlesztés alatt állnak.
+                                </span>
+                            </div>
                         </div>
+
+                        <!-- GYORSMŰVELETEK ÉS FIGYELMEZTETÉSEK -->
+                        <div class="row g-3">
+
+                            <!-- GYORSMŰVELETEK -->
+                            <div class="col-12 col-lg-7">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-4">
+
+                                        <h5 class="fw-bold mb-1">Gyorsműveletek</h5>
+                                        <p class="text-muted small mb-4">
+                                            A portaszolgálat leggyakrabban használt funkciói.
+                                        </p>
+
+                                        <div class="row g-3">
+
+                                            <div class="col-12 col-sm-12">
+                                                <a href="/keymanagement" class="btn btn-primary">
+                                                    Kulcskezelés
+                                                </a>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <a href="/issuetickets"
+                                                   class="btn btn-outline-secondary w-100 py-3">
+                                                    Hibajegyek kezelése
+                                                </a>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="text-muted small mt-3">
+                                            A kulcskiadás és visszavétel funkciói hamarosan elérhetők.
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FIGYELMEZTETÉSEK -->
+                            <div class="col-12 col-lg-5">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-4">
+
+                                        <h5 class="fw-bold mb-1">Figyelmeztetések</h5>
+                                        <p class="text-muted small mb-4">
+                                            Figyelmet igénylő kulcskezelési események.
+                                        </p>
+
+                                        <!-- IDEIGLENES TESZTADATOK -->
+                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-3"
+                                             role="alert">
+                                            <span>⚠️</span>
+                                            <div>
+                                                <div class="fw-semibold">
+                                                    Késésben lévő kulcs
+                                                </div>
+                                                <div class="small">
+                                                    I/205 – Nagy Anna
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-0"
+                                             role="alert">
+                                            <span>ℹ️</span>
+                                            <div>
+                                                <div class="fw-semibold">
+                                                    Karbantartás alatt
+                                                </div>
+                                                <div class="small">
+                                                    I/104 – A terem ideiglenesen nem használható.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!--
+                                            TODO:
+                                            A figyelmeztetéseket később valós
+                                            kulcs- és karbantartási adatokból
+                                            kell előállítani.
+                                        -->
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
                     </div>
                 }
+
 
                 <!-- ADMINISZTRÁTOR -->
                 @if (SelectedRole == "Adminisztrátor")
@@ -292,5 +557,50 @@
 </AuthorizeView>
 
 @code {
-    private string SelectedRole { get; set; } = "Adminisztrátor";
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool IsRoleLoaded { get; set; }
+    private string? ActualRole { get; set; }
+    private string? SelectedRole { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask is null)
+        {
+            IsRoleLoaded = true;
+            return;
+        }
+
+        var authenticationState = await AuthenticationStateTask;
+        var principal = authenticationState.User;
+
+        if (principal.Identity?.IsAuthenticated == true)
+        {
+            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var user = await db.Users
+                    .AsNoTracking()
+                    .Include(u => u.Roles)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                var roles = user?.Roles.Select(role => role.RoleName).ToHashSet(StringComparer.Ordinal);
+
+                ActualRole = roles is null ? null
+                    : roles.Contains("admin") ? "Adminisztrátor"
+                    : roles.Contains("teacher") ? "Oktató / Igénylő"
+                    : roles.Contains("janitor") ? "Portás / Operátor"
+                    : roles.Contains("Operations Director") ? "Üzemeltetési igazgató"
+                    : null;
+            }
+        }
+
+        SelectedRole = ActualRole;
+        IsRoleLoaded = true;
+    }
+
+    private void ResetRoleSelection() => SelectedRole = ActualRole;
 }
