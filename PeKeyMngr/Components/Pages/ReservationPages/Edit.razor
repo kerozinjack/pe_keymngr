@@ -1,5 +1,6 @@
 @page "/reservations/edit"
 @using Microsoft.AspNetCore.Authorization
+@using PeKeyMngr.Components.Shared
 @using PeKeyMngr.Models
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
@@ -50,3 +51,20 @@
                          OnErrorCleared="ClearErrorMessage" />
     }
 </div>
+
+<SuccessModal IsOpen="ShowSuccessModal"
+              Title="Sikeres módosítás"
+              Description="A foglalás módosítása megtörtént."
+              PrimaryButtonText="Foglalás részletei"
+              SecondaryButtonText="Foglalásaim"
+              OnSecondaryAction="NavigateToReservations"
+              OnPrimaryAction="NavigateToDetails">
+    <dl class="success-modal-details">
+        <dt>Terem</dt>
+        <dd>@ReservationSuccessRoom</dd>
+        <dt>Időpont</dt>
+        <dd>@ReservationSuccessSchedule</dd>
+        <dt>Igényelt felszerelés</dt>
+        <dd>@ReservationSuccessEquipment</dd>
+    </dl>
+</SuccessModal>
