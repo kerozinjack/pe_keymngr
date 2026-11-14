@@ -9,7 +9,7 @@ using PeKeyMngr.Models;
 
 namespace PeKeyMngr.Components.Pages.ReservationPages
 {
-    public partial class Create : IAsyncDisposable
+    public partial class Booking : IAsyncDisposable
     {
         [Inject]
         private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
@@ -21,7 +21,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private UserManager<ApplicationUser> UserManager { get; set; } = default!;
 
         [Inject]
-        private ILogger<Create> Logger { get; set; } = default!;
+        private ILogger<Booking> Logger { get; set; } = default!;
 
         [Inject]
         private NavigationManager NavigationManager { get; set; } = default!;
