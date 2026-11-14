@@ -1,0 +1,33 @@
+.booking-status-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    color: #555;
+    font-size: 0.875rem;
+}
+
+.booking-status-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.booking-status-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid #222;
+    border-radius: 0.2rem;
+}
+
+.booking-status-dot.available {
+    background: #3b9723;
+}
+
+.booking-status-dot.reserved {
+    background: #c91818;
+}
+
+.booking-status-dot.maintenance {
+    background: #d99e00;
+}

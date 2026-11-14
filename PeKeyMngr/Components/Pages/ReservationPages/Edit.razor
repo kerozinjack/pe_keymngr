@@ -1,0 +1,52 @@
+@page "/reservations/edit"
+@using Microsoft.AspNetCore.Authorization
+@using PeKeyMngr.Models
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "CanAccessTeacherPages")]
+
+<PageTitle>Foglalás szerkesztése</PageTitle>
+
+<div class="container py-4">
+    @if (IsLoading)
+    {
+        <p class="text-muted"><em>Betöltés...</em></p>
+    }
+    else if (!IsAuthorized)
+    {
+        <div class="alert alert-danger" role="alert">
+            Foglalást csak tanári jogosultsággal lehet módosítani.
+        </div>
+    }
+    else if (!CanEditReservation)
+    {
+        <div class="mb-4">
+            <h1 class="h2 fw-bold mb-1">Foglalás szerkesztése</h1>
+        </div>
+        <div class="alert alert-danger" role="alert">
+            @(ErrorMessage ?? "A foglalás nem található vagy nem módosítható.")
+        </div>
+        <a class="btn btn-outline-secondary" href="/reservations">Vissza a foglalásokhoz</a>
+    }
+    else if (Reservation is not null)
+    {
+        <div class="mb-4">
+            <h1 class="h2 fw-bold mb-1">Foglalás szerkesztése</h1>
+            <p class="text-muted mb-0">Módosítsa a foglalás időpontját, termét vagy igényelt felszereléseit.</p>
+        </div>
+
+        <ReservationForm InitialStartTime="Reservation.StartTime"
+                         InitialDurationMinutes="DurationMinutes"
+                         InitialRoomId="Reservation.Room.RoomId"
+                         InitialEquipmentIds="InitialEquipmentIds"
+                         Rooms="Rooms"
+                         Equipment="Equipment"
+                         ReservationIntervals="ReservationIntervals"
+                         MaintenanceIntervals="MaintenanceIntervals"
+                         ErrorMessage="@ErrorMessage"
+                         ScheduleSectionTitle="Időpont"
+                         SubmitText="Módosítások mentése"
+                         IsSaving="IsSaving"
+                         OnSubmit="UpdateReservationAsync"
+                         OnErrorCleared="ClearErrorMessage" />
+    }
+</div>

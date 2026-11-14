@@ -1,0 +1,109 @@
+@using PeKeyMngr.Models
+
+@if (!string.IsNullOrWhiteSpace(DisplayErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">@DisplayErrorMessage</div>
+}
+
+<section class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <h2 class="h5 mb-0">@ScheduleSectionTitle</h2>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12 col-md-4">
+                <label for="reservation-date" class="form-label">Dátum</label>
+                <input id="reservation-date"
+                       type="date"
+                       class="form-control"
+                       min="@DateTime.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)"
+                       @bind="SelectedDate"
+                       @bind:format="yyyy-MM-dd"
+                       @bind:after="ScheduleChanged" />
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="reservation-start" class="form-label">Kezdés</label>
+                <select id="reservation-start"
+                        class="form-select"
+                        @bind="StartHour"
+                        @bind:after="ScheduleChanged">
+                    @foreach (int hour in AvailableStartHours)
+                    {
+                        <option value="@hour">@($"{hour:D2}:00")</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="reservation-duration" class="form-label">Időtartam</label>
+                <select id="reservation-duration"
+                        class="form-select"
+                        @bind="DurationMinutes"
+                        @bind:after="ScheduleChanged">
+                    @foreach (int duration in AvailableDurations)
+                    {
+                        <option value="@duration">@FormatDuration(duration)</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+</section>
+
+<RoomSelector Rooms="RoomOptions"
+              ScheduleSummary="ScheduleSummary"
+              SelectedRoomId="SelectedRoomId"
+              SelectedRoomIdChanged="SelectRoomAsync"
+              OnFiltersChanged="ClearErrorMessage" />
+
+<section class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white py-3">
+        <h2 class="h5 mb-0">Extra felszerelés igénylése</h2>
+    </div>
+    <div class="card-body">
+        @if (AvailableExtraEquipmentOptions.Count == 0)
+        {
+            <p class="text-muted mb-0">
+                @(SelectedRoom is null
+                    ? "Nincs felszerelés az adatbázisban."
+                    : "A kiválasztott teremhez nincs felszerelés megadva.")
+            </p>
+        }
+        else
+        {
+            <div class="row g-2">
+                @foreach (EquipmentOption equipment in AvailableExtraEquipmentOptions)
+                {
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label class="form-check">
+                            <input type="checkbox" class="form-check-input" @bind="equipment.Selected" />
+                            <span class="form-check-label">@equipment.Name</span>
+                        </label>
+                    </div>
+                }
+            </div>
+            <p class="text-muted small mt-3 mb-0">
+                Csak a kiválasztott terem felszerelései közül választhat. Darabszám megadása nem szükséges.
+            </p>
+        }
+    </div>
+</section>
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mt-4">
+    <div class="text-muted">
+        @if (SelectedRoom is not null)
+        {
+            <span>Kiválasztott terem: <strong>@SelectedRoom.RoomName</strong></span>
+        }
+        else
+        {
+            <span>Válasszon egy szabad termet.</span>
+        }
+    </div>
+    <button type="button"
+            class="btn btn-primary btn-lg"
+            disabled="@(!CanSubmit || IsSaving)"
+            @onclick="SubmitAsync">
+        @SubmitText
+    </button>
+</div>
+

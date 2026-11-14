@@ -1,9 +1,14 @@
 @page "/reservations/delete"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data
 @using PeKeyMngr.Models
 @inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
@@ -43,8 +48,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        reservation = await context.Reservations.FirstOrDefaultAsync(m => m.ReservationId == ReservationId);
+        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        string? userId = UserManager.GetUserId(authenticationState.User);
+        if (userId is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        reservation = await context.Reservations
+            .FirstOrDefaultAsync(item => item.ReservationId == ReservationId && item.RequestedBy.Id == userId);
 
         if (reservation is null)
         {
@@ -54,8 +68,24 @@
 
     private async Task DeleteReservation()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.Reservations.Remove(reservation!);
+        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        string? userId = UserManager.GetUserId(authenticationState.User);
+        if (userId is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        Reservation? reservationToDelete = await context.Reservations
+            .FirstOrDefaultAsync(item => item.ReservationId == ReservationId && item.RequestedBy.Id == userId);
+        if (reservationToDelete is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        context.Reservations.Remove(reservationToDelete);
         await context.SaveChangesAsync();
         NavigationManager.NavigateTo("/reservations");
     }

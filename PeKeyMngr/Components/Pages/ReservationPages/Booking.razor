@@ -1,0 +1,53 @@
+@page "/reservations/booking"
+@using Microsoft.AspNetCore.Authorization
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "CanAccessTeacherPages")]
+
+<PageTitle>Új foglalás</PageTitle>
+
+<div class="container py-4 reservation-create">
+    <div class="mb-4">
+        <h1 class="h2 fw-bold mb-1">Új foglalás</h1>
+        <p class="text-muted mb-0">Válasszon időpontot és szabad termet az épületben.</p>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <p class="text-muted mb-0"><em>Betöltés...</em></p>
+            </div>
+        </div>
+    }
+    else if (!IsAuthorized)
+    {
+        <div class="alert alert-danger" role="alert">
+            Foglalást csak tanári jogosultsággal lehet indítani.
+        </div>
+    }
+    else
+    {
+        <ReservationForm InitialStartTime="InitialStartTime"
+                         InitialRoomId="InitialRoomId"
+                         Rooms="Rooms"
+                         Equipment="Equipment"
+                         ReservationIntervals="ReservationIntervals"
+                         MaintenanceIntervals="MaintenanceIntervals"
+                         ResetSelectionVersion="ResetSelectionVersion"
+                         ErrorMessage="@ErrorMessage"
+                         OnSubmit="CreateReservationAsync"
+                         OnErrorCleared="ClearErrorMessage" />
+        <div class="booking-status-legend">
+            <span><i class="booking-status-dot available"></i> Szabad</span>
+            <span><i class="booking-status-dot reserved"></i> Foglalt</span>
+            <span><i class="booking-status-dot maintenance"></i> Karbantartás alatt</span>
+        </div>
+    }
+</div>
+
+<ReservationSuccessModal IsOpen="ShowSuccessModal"
+                         RoomName="@ReservationSuccessRoom"
+                         Schedule="@ReservationSuccessSchedule"
+                         Equipment="@ReservationSuccessEquipment"
+                         OnClose="CloseSuccessModal"
+                         OnViewReservations="NavigateToReservations" />

@@ -1,4 +1,5 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+ENV TZ=Europe/Budapest
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
@@ -25,7 +26,8 @@ USER root
 RUN mkdir /app/Data
 RUN chown -R $APP_UID:$APP_UID /app/Data
 RUN apt update
-RUN apt install curl -y
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt install -y curl tzdata
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "PeKeyMngr.dll"]
