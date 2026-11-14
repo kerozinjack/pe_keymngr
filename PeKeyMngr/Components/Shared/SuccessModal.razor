@@ -1,0 +1,54 @@
+@if (IsOpen)
+{
+    <div class="success-modal-backdrop">
+        <section class="success-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@titleId">
+            <div class="success-modal-icon" aria-hidden="true">✓</div>
+            <h2 id="@titleId">@Title</h2>
+            <p class="text-muted">@Description</p>
+
+            <div class="success-modal-content">
+                @ChildContent
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnSecondaryAction">
+                    @SecondaryButtonText
+                </button>
+                <button type="button" class="btn btn-primary" @onclick="OnPrimaryAction">
+                    @PrimaryButtonText
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly string titleId = $"success-modal-title-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Sikeres művelet";
+
+    [Parameter]
+    public string Description { get; set; } = "A művelet sikeresen befejeződött.";
+
+    [Parameter]
+    public string PrimaryButtonText { get; set; } = "Rendben";
+
+    [Parameter]
+    public string SecondaryButtonText { get; set; } = "Bezárás";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnSecondaryAction { get; set; }
+
+    [Parameter]
+    public EventCallback OnPrimaryAction { get; set; }
+}
