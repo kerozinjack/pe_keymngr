@@ -44,10 +44,19 @@
 
                     <TemplateColumn Context="reservation" Title="Műveletek">
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="@($"reservations/edit?reservationid={reservation.ReservationId}")"
-                               class="btn btn-sm btn-outline-primary">
-                                Szerkesztés
-                            </a>
+                            @if (reservation.StartTime <= DateTime.Now)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+                                    Szerkesztés
+                                </button>
+                            }
+                            else
+                            {
+                                <a href="@($"reservations/edit?reservationid={reservation.ReservationId}")"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Szerkesztés
+                                </a>
+                            }
                             <a href="@($"reservations/details?reservationid={reservation.ReservationId}")"
                                class="btn btn-sm btn-outline-secondary">
                                 Részletek

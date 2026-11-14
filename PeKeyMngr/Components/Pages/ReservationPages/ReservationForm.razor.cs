@@ -86,11 +86,11 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
 
         private List<int> AvailableStartHours =>
             (SelectedDate.Date == DateTime.Today
-                ? GetStartHours(Math.Max(8, DateTime.Now.Hour + 1))
+                ? GetStartHours(Math.Max(8, DateTime.Now.Hour))
                 : SelectedDate.Date > DateTime.Today
                     ? Enumerable.Range(8, 11).ToList()
                     : new())
-            .Where(hour => !IsWithinStartCutoff(SelectedDate.Date.AddHours(hour)))
+            .Where(hour => SelectedDate.Date.AddHours(hour) >= DateTime.Now)
             .ToList();
 
         private IEnumerable<int> AvailableDurations
@@ -117,7 +117,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private List<EquipmentOption> AvailableExtraEquipmentOptions =>
             EquipmentOptions
                 .Where(option => SelectedRoom is null ||
-                                 SelectedRoom.Equipments.All(equipment => equipment.EquipmentId != option.Id))
+                                 SelectedRoom.Equipments.Any(equipment => equipment.EquipmentId == option.Id))
                 .ToList();
 
         private Room? SelectedRoom =>
@@ -131,7 +131,6 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             {
                 if (!TryGetSchedule(out DateTime start, out _) ||
                     start < DateTime.Now ||
-                    IsWithinStartCutoff(start) ||
                     SelectedRoomId is not Guid roomId)
                 {
                     return false;
@@ -149,11 +148,6 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 if (requestedStart < DateTime.Now)
                 {
                     return "A foglalás kezdete nem lehet múltbeli.";
-                }
-
-                if (IsWithinStartCutoff(requestedStart))
-                {
-                    return "A foglalást legalább 24 órával a kezdés előtt kell rögzíteni.";
                 }
 
                 return TryGetSchedule(out DateTime start, out DateTime end)
@@ -210,12 +204,6 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 return;
             }
 
-            if (IsWithinStartCutoff(start))
-            {
-                LocalErrorMessage = "A foglalás kezdése legalább 24 órával később lehet.";
-                return;
-            }
-
             if (SelectedRoomId is not Guid roomId)
             {
                 LocalErrorMessage = "Válasszon szabad termet.";
@@ -231,9 +219,9 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             if (SelectedRoom is Room room &&
                 EquipmentOptions.Any(option =>
                     option.Selected &&
-                    room.Equipments.Any(equipment => equipment.EquipmentId == option.Id)))
+                    room.Equipments.All(equipment => equipment.EquipmentId != option.Id)))
             {
-                LocalErrorMessage = "A terem saját felszerelése nem igényelhető extra eszközként.";
+                LocalErrorMessage = "Csak a kiválasztott terem felszerelései közül választhat.";
                 return;
             }
 
@@ -259,9 +247,6 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             firstHour <= 18
                 ? Enumerable.Range(firstHour, 19 - firstHour).ToList()
                 : [];
-
-        private static bool IsWithinStartCutoff(DateTime start) =>
-            start <= DateTime.Now.AddHours(24);
 
         private static string FormatDuration(int durationMinutes)
         {

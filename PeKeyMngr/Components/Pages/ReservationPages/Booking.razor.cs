@@ -109,9 +109,8 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             }
 
             DateTime now = DateTime.Now;
-            DateTime earliestStart = now.AddHours(24);
-            DateTime nextWholeHour = earliestStart.Date.AddHours(earliestStart.Hour);
-            if (nextWholeHour <= earliestStart)
+            DateTime nextWholeHour = now.Date.AddHours(now.Hour);
+            if (nextWholeHour < now)
             {
                 nextWholeHour = nextWholeHour.AddHours(1);
             }
@@ -194,16 +193,10 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 return;
             }
 
-            if (request.StartTime <= DateTime.Now.AddHours(24))
-            {
-                ErrorMessage = "A foglalás kezdése legalább 24 órával később lehet.";
-                return;
-            }
-
             DateTime start = request.StartTime;
             DateTime end = request.EndTime;
             int durationMinutes = (int)(end - start).TotalMinutes;
-            if (start.Date < DateTime.Today ||
+            if (start < DateTime.Now ||
                 start.Hour is < 8 or > 18 ||
                 start.Minute != 0 ||
                 start.Second != 0 ||
@@ -231,9 +224,10 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 ErrorMessage = "A kiválasztott felszerelések listája érvénytelen.";
                 return;
             }
-            if (selectedEquipmentIds.Any(id => room.Equipments.Any(equipment => equipment.EquipmentId == id)))
+            if (selectedEquipmentIds.Any(id =>
+                    room.Equipments.All(equipment => equipment.EquipmentId != id)))
             {
-                ErrorMessage = "A kiválasztott terem saját felszerelése nem igényelhető extra eszközként.";
+                ErrorMessage = "Csak a kiválasztott terem felszerelései közül választhat.";
                 return;
             }
 

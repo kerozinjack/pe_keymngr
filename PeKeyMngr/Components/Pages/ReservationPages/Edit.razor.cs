@@ -33,6 +33,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private bool IsAuthorized { get; set; }
         private bool CanEditReservation { get; set; }
         private bool IsSaving { get; set; }
+        private bool isInitialized;
         private string? UserId { get; set; }
         private string? ErrorMessage { get; set; }
         private Reservation? Reservation { get; set; }
@@ -48,7 +49,16 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private IReadOnlyCollection<Guid> InitialEquipmentIds =>
             Reservation?.Equipments.Select(equipment => equipment.EquipmentId).ToList() ?? [];
 
-        protected override async Task OnParametersSetAsync()
+        protected override async Task OnInitializedAsync()
+        {
+            await LoadReservationAsync();
+            isInitialized = true;
+        }
+
+        protected override Task OnParametersSetAsync() =>
+            isInitialized ? LoadReservationAsync() : Task.CompletedTask;
+
+        private async Task LoadReservationAsync()
         {
             IsLoading = true;
             IsAuthorized = false;
@@ -102,9 +112,9 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     return;
                 }
 
-                if (Reservation.StartTime <= DateTime.Now.AddHours(24))
+                if (Reservation.StartTime <= DateTime.Now)
                 {
-                    ErrorMessage = "A foglalás a kezdés előtti 24 órában már nem módosítható.";
+                    ErrorMessage = "Már megkezdett foglalást nem lehet szerkeszteni.";
                     return;
                 }
 
@@ -183,9 +193,9 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     return;
                 }
 
-                if (reservationToUpdate.StartTime <= DateTime.Now.AddHours(24))
+                if (reservationToUpdate.StartTime <= DateTime.Now)
                 {
-                    ErrorMessage = "A foglalás a kezdés előtti 24 órában már nem módosítható.";
+                    ErrorMessage = "Már megkezdett foglalást nem lehet szerkeszteni.";
                     CanEditReservation = false;
                     return;
                 }
@@ -199,8 +209,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     start == reservationToUpdate.StartTime &&
                     durationMinutes == existingDurationMinutes;
 
-                if (start <= DateTime.Now.AddHours(24) ||
-                    start.Date < DateTime.Today ||
+                if ((start != reservationToUpdate.StartTime && start < DateTime.Now) ||
                     start.Hour is < 8 or > 18 ||
                     start.Minute != 0 ||
                     start.Second != 0 ||
@@ -208,7 +217,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     (durationMinutes % 45 != 0 && !preservingExistingDuration) ||
                     end > start.Date.AddHours(20))
                 {
-                    ErrorMessage = "A foglalás legalább 24 órával később, 08:00 és 18:00 közötti kezdéssel, 45 perces lépésekben, legkésőbb 20:00-ig tarthat.";
+                    ErrorMessage = "A foglalás nem kezdődhet múltbeli időpontban, 08:00 és 18:00 közötti kezdéssel, 45 perces lépésekben, legkésőbb 20:00-ig tarthat.";
                     return;
                 }
 
@@ -223,9 +232,10 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
 
                 List<Guid> equipmentIds = request.SelectedEquipmentIds.Distinct().ToList();
                 if (equipmentIds.Count != request.SelectedEquipmentIds.Count ||
-                    equipmentIds.Any(id => room.Equipments.Any(equipment => equipment.EquipmentId == id)))
+                    equipmentIds.Any(id =>
+                        room.Equipments.All(equipment => equipment.EquipmentId != id)))
                 {
-                    ErrorMessage = "A kiválasztott felszerelések listája érvénytelen.";
+                    ErrorMessage = "Csak a kiválasztott terem felszerelései közül választhat.";
                     return;
                 }
 

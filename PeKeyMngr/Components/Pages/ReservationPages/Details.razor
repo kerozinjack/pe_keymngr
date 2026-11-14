@@ -64,10 +64,19 @@
             </div>
             <div class="card-footer bg-white d-flex flex-wrap justify-content-between gap-2 py-3">
                 <a class="btn btn-outline-secondary" href="/reservations">Vissza a listához</a>
-                <a class="btn btn-primary"
-                   href="@($"/reservations/edit?reservationid={reservation.ReservationId}")">
-                    Szerkesztés
-                </a>
+                @if (reservation.StartTime <= DateTime.Now)
+                {
+                    <button type="button" class="btn btn-primary" disabled>
+                        Szerkesztés
+                    </button>
+                }
+                else
+                {
+                    <a class="btn btn-primary"
+                       href="@($"/reservations/edit?reservationid={reservation.ReservationId}")">
+                        Szerkesztés
+                    </a>
+                }
             </div>
         </section>
     }
