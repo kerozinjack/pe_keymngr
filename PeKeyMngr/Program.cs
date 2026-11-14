@@ -20,7 +20,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 {
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ??
                       throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
-});
+}, ServiceLifetime.Scoped);
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
 builder.Services.AddAuthentication(options =>
@@ -74,10 +74,17 @@ builder.Services.AddScoped<IAuthorizationHandler, CanAccessOperationsDirectorPag
 
 builder.Services.AddControllers();
 
+// HTTP-kérés adatainak wlérése.
+builder.Services.AddHttpContextAccessor();
+
+// Auditnaplózáshoz szükséges szolgáltatások.
+builder.Services.AddScoped<AuditActorProvider>();
+builder.Services.AddScoped<AuditLogWriter>();
+
+// Portás kulcskezelési szolgáltatása.
 builder.Services.AddScoped<KeyManagementService>();
 
 WebApplication? app = builder.Build();
-
 // Apply database migrations
 using (IServiceScope? scope = app.Services.CreateScope())
 {

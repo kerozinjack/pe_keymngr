@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
@@ -21,7 +22,7 @@ public sealed class AuthorizationTestFixture : IAsyncLifetime
             .UseSqlite(_connection)
             .Options;
 
-        DbContext = new ApplicationDbContext(options);
+        DbContext = new ApplicationDbContext(options, null);
 
         await DbContext.Database.EnsureCreatedAsync();
 

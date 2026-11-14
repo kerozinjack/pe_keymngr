@@ -8,6 +8,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWithRecoveryCode> Logger
+@inject AuditLogWriter AuditWriter
 
 <PageTitle>Helyreállítási kód ellenőrzése</PageTitle>
 
@@ -53,6 +54,8 @@
             throw new InvalidOperationException("Nem sikerült betölteni a kétlépcsős hitelesítéshez tartozó felhasználót.");
     }
 
+    // A normál Login-oldal a 2FA szükségességekor ide irányít.
+    // A sikeres belépést CSAK a tényleges 2FA/Recovery siker után írjuk be.
     private async Task OnValidSubmitAsync()
     {
         var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty);
@@ -61,18 +64,26 @@
 
         var userId = await UserManager.GetUserIdAsync(user);
 
+        // Az Identity által visszaadott eredmény alapján készítünk eseménylogot.
         if (result.Succeeded)
         {
+            await AuditWriter.WriteAsync("Hitelesítés", $"Felhasználó: {user.UserName ?? userId} helyreállító kóddal bejelentkezett.");
             Logger.LogInformation("A(z) '{UserId}' azonosítójú felhasználó helyreállítási kóddal bejelentkezett.", userId);
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
         {
+            await AuditWriter.WriteAsync(
+                "Hitelesítés", $"Sikertelen helyreállító kód (zárolt fiók): {user.UserName ?? userId}.",
+                PeKeyMngr.Models.Severity.Warn);
             Logger.LogWarning("A felhasználói fiókot zárolták.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
+            await AuditWriter.WriteAsync(
+                "Hitelesítés", $"Sikertelen helyreállító kód: {user.UserName ?? userId}.",
+                PeKeyMngr.Models.Severity.Warn);
             Logger.LogWarning("Érvénytelen helyreállítási kódot adtak meg a(z) '{UserId}' azonosítójú felhasználóhoz.", userId);
             message = "Hiba: Érvénytelen helyreállítási kód.";
         }

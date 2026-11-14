@@ -44,11 +44,22 @@ namespace Microsoft.AspNetCore.Routing
             accountGroup.MapPost("/Logout", async (
                 ClaimsPrincipal user,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
+                [FromServices] AuditLogWriter auditWriter,
                 [FromForm] string returnUrl) =>
-            {
-                await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
-            });
+                {
+
+                    string userName = user.Identity?.Name ?? "ismeretlen";
+
+                    await signInManager.SignOutAsync();
+
+                    if (user.Identity?.IsAuthenticated == true)
+                    {
+                        await auditWriter.WriteAsync(
+                            "Hitelesítés", $"Felhasználó: {userName} kijelentkezett.");
+                    }
+                    return TypedResults.LocalRedirect($"~/{returnUrl}");
+                }
+            );
 
             accountGroup.MapPost("/PasskeyCreationOptions", async (
                 HttpContext context,

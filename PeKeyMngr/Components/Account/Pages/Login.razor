@@ -10,6 +10,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject AuditLogWriter AuditWriter
 
 <PageTitle>Bejelentkezés</PageTitle>
 
@@ -167,19 +168,27 @@
         }
     }
 
+    // A Blazor Identity = hitelesites
     public async Task LoginUser()
     {
         if (!string.IsNullOrEmpty(Input.Passkey?.Error))
         {
-            errorMessage = $"Hiba: {Input.Passkey.Error}";
+            await AuditWriter.WriteAsync(
+                "Hitelesítés", "Sikertelen passkey-bejelentkezési kísérlet.",
+                PeKeyMngr.Models.Severity.Warn);
+            errorMessage = $"Error: {Input.Passkey.Error}";
             return;
         }
 
-        SignInResult result;
-        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+        SignInResult result = default!;
+        string? passkeyJson = Input.Passkey?.CredentialJson;
+        bool usedPasskey = !string.IsNullOrEmpty(passkeyJson);
+        if (usedPasskey)
         {
-            // When performing passkey sign-in, don't perform form validation.
-            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            if(Input.Passkey is not null && Input.Passkey.CredentialJson is not null){
+                // When performing passkey sign-in, don't perform form validation.
+                result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            }
         }
         else
         {
@@ -196,6 +205,11 @@
 
         if (result.Succeeded)
         {
+            // Jelszavas belépésnél Input.Email = az ellenőrzött felhasználónév.
+            string message = usedPasskey
+                ? "Egy felhasználó passkey azonosítással bejelentkezett (név nem áll rendelkezésre)."
+                : $"Felhasználó: {AuditEmail(Input.Email)} bejelentkezett.";
+            await AuditWriter.WriteAsync("Hitelesítés", message);
             Logger.LogInformation("User logged in.");
             RedirectManager.RedirectTo(ReturnUrl);
         }
@@ -205,15 +219,30 @@
                 "Account/LoginWith2fa",
                 new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
+        // sikertelen belepes=  Warn
         else if (result.IsLockedOut)
         {
+            await AuditWriter.WriteAsync(
+                "Hitelesítés",
+                $"Sikertelen bejelentkezés (zárolt fiók): {AuditEmail(Input.Email)}.",
+                PeKeyMngr.Models.Severity.Warn);
             Logger.LogWarning("User account locked out.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            errorMessage = "Hiba: Érvénytelen bejelentkezési kísérlet.";
+            await AuditWriter.WriteAsync(
+                "Hitelesítés",
+                $"Sikertelen bejelentkezési kísérlet: {AuditEmail(Input.Email)}.",
+                PeKeyMngr.Models.Severity.Warn);
+            errorMessage = "Error: Invalid login attempt.";
         }
+    }
+
+    private static string AuditEmail(string? email)
+    {
+        string cleaned = (email ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ');
+        return cleaned.Length > 200 ? cleaned[..200] : cleaned;
     }
 
     private sealed class InputModel
