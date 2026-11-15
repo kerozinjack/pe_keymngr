@@ -1,73 +1,135 @@
+using System.Data;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using PeKeyMngr.Models;
 
 namespace PeKeyMngr.Data
 {
-    // demonstrációs foglalás dto-k
-    public sealed record DemoKeyReservation(
+    // Egy adott foglaláshoz és átvevőhöz használható kulcs.
+    public sealed record JanitorKeyOption(Guid KeyId, string KeyName);
+
+    // Valódi foglalás a portásoldal számára. Nincs szükség külön adatbázistáblára.
+    public sealed record JanitorReservation(
+        Guid ReservationId,
         Guid RoomId,
         string RoomName,
-        Guid KeyId,
-        string KeyName,
+        string Building,
+        string Floor,
         string ParticipantId,
-        string ParticipantName);
+        string ParticipantName,
+        DateTime StartTime,
+        DateTime EndTime,
+        List<JanitorKeyOption> Keys)
+    {
+        // A teremhez fizikailag hozzárendelt ÖSSZES kulcs azonosítója.
+        // A teremstátuszhoz kell, függetlenül az adott oktató jogosultságaitól.
+        // Ez csak a felületnek szánt adat, NEM új adatbázismező.
+        public List<Guid> RoomKeyIds { get; init; } = [];
+    }
 
+    // A tényleges KeyTransaction előzményekből meghatározott, jelenleg kiadott kulcs.
     public sealed record ActiveKeyIssue(
         Guid KeyId,
         string KeyName,
         string ParticipantName,
         DateTime IssuedAtUtc,
-        Guid TransactionId);
+        Guid TransactionId)
+    {
+        // Az átvevő azonosítója és a fizikai kulcs által nyitható termek.
+        // A frontend így észreveszi, ha az oktatónál már van megfelelő kulcs.
+        // Ezek NEM a KeyTransaction modell új mezői.
+        public string ParticipantId { get; init; } = string.Empty;
+        public List<Guid> AssignedRoomIds { get; init; } = [];
+    }
 
-    public sealed record KeyOperationResult(
-        bool Success,
-        string Message);
+    // Egyszerű eredménytípus: a felületnek nem kell kivételekkel üzenetet továbbítania.
+    public sealed record KeyOperationResult(bool Success, string Message);
 
     public sealed class KeyManagementService(
-        IDbContextFactory<ApplicationDbContext> dbFactory)
+        IDbContextFactory<ApplicationDbContext> dbFactory) // tesztóra használathoz írd be: JanitorTestClock testClock
     {
-        // TODO: A demonstrációs foglalásokat később
-        // a valódi foglalási rendszer adataira kell cserélni.
-        public async Task<List<DemoKeyReservation>> GetDemoReservationsAsync()
+        // A kulcskiadás sem a kezdéshez, sem a befejezéshez nincs időben kötve.
+        // Csak az adott naphoz tartozó valódi foglalások; nem generálunk kombinációkat.
+        // A kulcsok a Key.AssignedRooms kapcsolaton keresztül tartoznak a teremhez.
+        public async Task<List<JanitorReservation>> GetTodayReservationsAsync()
         {
             await using ApplicationDbContext db =
                 await dbFactory.CreateDbContextAsync();
 
-            // oktatok+kulcs+termek lekerese
-            var teachers = await db.Users
+            // A valós napot használjuk, kivéve ha Development alatt a portás
+            // bekapcsolta a saját, munkamenethez kötött tesztóráját.
+            //DateTime today = testClock.Now.Date; // Engedélyezd ha tesztelni akarod a portás dashboardon a holnapi foglalások listázása funkciót
+            DateTime today = DateTime.Today;
+
+            DateTime tomorrow = today.AddDays(1);
+
+            List<Reservation> reservations = await db.Reservations
                 .AsNoTracking()
-                .Where(u => u.Roles.Any(r => r.RoleName == "teacher"))
-                .OrderBy(u => u.UserName)
-                .Select(u => new
-                {
-                    u.Id,
-                    u.UserName
-                })
+                .Include(reservation => reservation.Room)
+                .Include(reservation => reservation.RequestedBy)
+                    .ThenInclude(user => user.Roles)
+                .Where(reservation =>
+                    reservation.StartTime < tomorrow && reservation.EndTime > today)
+                .OrderBy(reservation => reservation.StartTime)
+                .ThenBy(reservation => reservation.Room.Building)
+                .ThenBy(reservation => reservation.Room.RoomName)
+                .AsSplitQuery()
                 .ToListAsync();
 
             List<Key> keys = await db.Keys
                 .AsNoTracking()
-                .Include(k => k.AssignedRooms)
-                .Include(k => k.RequiredRoles)
+                .Include(key => key.AssignedRooms)
+                .Include(key => key.RequiredRoles)
+                .AsSplitQuery()
                 .ToListAsync();
 
-            // demonstrációs foglalások
-            return (from teacher in teachers
-                    from key in keys.Where(k => k.RequiredRoles.Count == 0)
-                    from room in key.AssignedRooms
-                    orderby room.Building, room.Floor, room.RoomName, key.KeyName
-                    select new DemoKeyReservation(
-                        room.RoomId,
-                        $"{room.Building} / {room.Floor} / {room.RoomName}",
-                        key.KeyId,
-                        key.KeyName,
-                        teacher.Id,
-                        teacher.UserName ?? teacher.Id))
-                .ToList();
+            List<JanitorReservation> result = [];
+
+            foreach (Reservation reservation in reservations)
+            {
+                // Az adott teremhez rendelt kulcsok közül csak azokat mutatjuk,
+                // amelyek valamennyi szükséges szerepkörével rendelkezik az átvevő.
+                List<JanitorKeyOption> matchingKeys = keys
+                    .Where(key => key.AssignedRooms.Any(room =>
+                        room.RoomId == reservation.Room.RoomId))
+                    .Where(key => key.RequiredRoles.All(required =>
+                        reservation.RequestedBy.Roles.Any(owned =>
+                            owned.RoleId == required.RoleId)))
+                    .OrderBy(key => key.KeyName)
+                    .Select(key => new JanitorKeyOption(key.KeyId, key.KeyName))
+                    .ToList();
+
+                // A fizikai készletet és az oktató számára engedélyezett
+                // kulcsokat külön tartjuk nyilván. A Master kulcs itt is
+                // csak EGY darab kulcs, több AssignedRooms kapcsolattal.
+                List<Guid> roomKeyIds = keys
+                    .Where(key => key.AssignedRooms.Any(room =>
+                        room.RoomId == reservation.Room.RoomId))
+                    .Select(key => key.KeyId)
+                    .Distinct()
+                    .ToList();
+
+                result.Add(new JanitorReservation(
+                    reservation.ReservationId,
+                    reservation.Room.RoomId,
+                    reservation.Room.RoomName,
+                    reservation.Room.Building,
+                    reservation.Room.Floor,
+                    reservation.RequestedBy.Id,
+                    reservation.RequestedBy.UserName ?? reservation.RequestedBy.Id,
+                    reservation.StartTime,
+                    reservation.EndTime,
+                    matchingKeys)
+                {
+                    RoomKeyIds = roomKeyIds
+                });
+            }
+
+            return result;
         }
 
-        // kulcsok
+        // A kulcstranzakciók utolsó eseményéből derül ki, mely kulcsok vannak kint.
         public async Task<List<ActiveKeyIssue>> GetActiveIssuesAsync()
         {
             await using ApplicationDbContext db =
@@ -75,136 +137,187 @@ namespace PeKeyMngr.Data
 
             List<KeyTransaction> events = await db.KeyTransactions
                 .AsNoTracking()
-                .Include(t => t.Key)
-                .Include(t => t.Participant)
-                .OrderByDescending(t => t.Timestamp)
-                .ThenByDescending(t => t.KeyTransactionId)
+                .Include(transaction => transaction.Key)
+                    .ThenInclude(key => key.AssignedRooms)
+                .Include(transaction => transaction.Participant)
+                .AsSplitQuery()
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ThenByDescending(transaction => transaction.KeyTransactionId)
                 .ToListAsync();
 
             return events
-                .GroupBy(t => t.Key.KeyId)
-                .Select(g => g.First())
-                .Where(t => t.Direction == TransactionDirection.Out)
-                .Select(t => new ActiveKeyIssue(
-                    t.Key.KeyId,
-                    t.Key.KeyName,
-                    t.Participant.UserName ?? t.Participant.Id,
-                    t.Timestamp,
-                    t.KeyTransactionId))
-                .OrderBy(t => t.IssuedAtUtc)
+                .GroupBy(transaction => transaction.Key.KeyId)
+                .Select(group => group.First())
+                .Where(transaction => transaction.Direction == TransactionDirection.Out)
+                .Select(transaction => new ActiveKeyIssue(
+                    transaction.Key.KeyId,
+                    transaction.Key.KeyName,
+                    transaction.Participant.UserName ?? transaction.Participant.Id,
+                    transaction.Timestamp,
+                    transaction.KeyTransactionId)
+                {
+                    ParticipantId = transaction.Participant.Id,
+                    AssignedRoomIds = transaction.Key.AssignedRooms
+                        .Select(room => room.RoomId)
+                        .ToList()
+                })
+                .OrderBy(transaction => transaction.IssuedAtUtc)
                 .ToList();
         }
 
-        // kulcskiadas
+        // A frontend csak azonosítókat ad át, a jogosultságot és a foglalást
+        // az adatbázisból ÚJRA lekérjük, így a megváltoztatott kliensadat sem elég.
         public async Task<KeyOperationResult> IssueAsync(
-            DemoKeyReservation selection,
-            string? operatorId)
-        {
-            await using ApplicationDbContext db =
-                await dbFactory.CreateDbContextAsync();
-
-            await using IDbContextTransaction tx =
-                await db.Database.BeginTransactionAsync();
-
-            ApplicationUser? operatorUser =
-                await LoadJanitorAsync(db, operatorId);
-
-            if (operatorUser is null)
-            {
-                return new(
-                    false,
-                    "A kulcskiadáshoz portási jogosultság szükséges.");
-            }
-
-            Key? key = await db.Keys
-                .Include(k => k.AssignedRooms)
-                .Include(k => k.RequiredRoles)
-                .FirstOrDefaultAsync(k => k.KeyId == selection.KeyId);
-
-            ApplicationUser? participant = await db.Users
-                .Include(u => u.Roles)
-                .FirstOrDefaultAsync(u => u.Id == selection.ParticipantId);
-
-            if (key is null || participant is null ||
-                !participant.Roles.Any(r => r.RoleName == "teacher") ||
-                key.RequiredRoles.Count != 0 ||
-                !key.AssignedRooms.Any(r => r.RoomId == selection.RoomId))
-            {
-                return new(
-                    false,
-                    "A tesztfoglaláshoz nem található megfelelő kulcs, terem vagy oktató.");
-            }
-
-            // TODO: A valódi foglalási rendszer elkészülése után
-            // itt kell ellenőrizni a foglalás azonosítóját,
-            // tulajdonosát, időpontját, termét és állapotát.
-
-            KeyTransaction? latest = await db.KeyTransactions
-                .Where(t => t.Key.KeyId == key.KeyId)
-                .OrderByDescending(t => t.Timestamp)
-                .ThenByDescending(t => t.KeyTransactionId)
-                .FirstOrDefaultAsync();
-
-            // Ha a kulcs már ki van adva, nem adhatjuk ki újra.
-            if (latest?.Direction == TransactionDirection.Out)
-            {
-                return new(false, "Ez a kulcs már ki van adva.");
-            }
-
-            // kulcskiadási tranzakció.
-            db.KeyTransactions.Add(new KeyTransaction
-            {
-                KeyTransactionId = Guid.NewGuid(),
-                Timestamp = DateTime.UtcNow,
-                Direction = TransactionDirection.Out,
-                Key = key,
-                AuthorizedBy = operatorUser,
-                Participant = participant
-            });
-
-            await db.SaveChangesAsync();
-
-            await tx.CommitAsync();
-
-            return new(true, "A kulcskiadás sikeresen rögzítve.");
-        }
-
-        // kulcs visszavétele.
-        public async Task<KeyOperationResult> ReturnAsync(
+            Guid reservationId,
             Guid keyId,
             string? operatorId)
         {
             await using ApplicationDbContext db =
                 await dbFactory.CreateDbContextAsync();
 
+            // SQLite alatt a Serializable tranzakció védi a versengő írásokat.
             await using IDbContextTransaction tx =
-                await db.Database.BeginTransactionAsync();
+                await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-            ApplicationUser? operatorUser =
-                await LoadJanitorAsync(db, operatorId);
-
+            ApplicationUser? operatorUser = await LoadJanitorAsync(db, operatorId);
             if (operatorUser is null)
             {
-                return new(
-                    false,
-                    "A visszavételhez portási jogosultság szükséges.");
+                return new(false, "A kulcskiadáshoz portási jogosultság szükséges.");
+            }
+
+            Reservation? reservation = await db.Reservations
+                .Include(item => item.Room)
+                .Include(item => item.RequestedBy)
+                    .ThenInclude(user => user.Roles)
+                .FirstOrDefaultAsync(item => item.ReservationId == reservationId);
+
+            if (reservation is null)
+            {
+                return new(false, "A foglalás nem található. Frissítsd a listát.");
+            }
+
+            if (!reservation.RequestedBy.Roles.Any(role => role.RoleName == "teacher"))
+            {
+                return new(false, "A foglalás átvevője nem rendelkezik oktatói jogosultsággal.");
+            }
+
+            // Nincs időablakos tiltás: a létező foglalás kulcsa bármikor kiadható.
+            // A portás és az oktató jogosultságát, a terem-kulcs kapcsolatot,
+            // valamint a kulcs aktuális kiadottságát továbbra is ellenőrizzük.
+
+            Key? key = await db.Keys
+                .Include(item => item.AssignedRooms)
+                .Include(item => item.RequiredRoles)
+                .FirstOrDefaultAsync(item => item.KeyId == keyId);
+
+            if (key is null ||
+                !key.AssignedRooms.Any(room => room.RoomId == reservation.Room.RoomId))
+            {
+                return new(false, "A kulcs nem tartozik a foglalás terméhez.");
+            }
+
+            if (!key.RequiredRoles.All(required =>
+                reservation.RequestedBy.Roles.Any(owned => owned.RoleId == required.RoleId)))
+            {
+                return new(false, "Az oktató nem jogosult ennek a kulcsnak az átvételére.");
+            }
+
+            // EGY OKTATÓ / EGY TEREM: ha az oktatónál már van BÁRMELY
+            // olyan kiadott fizikai kulcs (akár Master), amely nyitja a
+            // kiválasztott termet, nem kaphat másodikat hozzá.
+            // Csak a kulcsok utolsó tranzakciója számít; egy régi Out,
+            // amelyet később In követett, már nem jelent aktív kiadást.
+            // Ez a vizsgálat ugyanebben az adatbázis-tranzakcióban fut.
+            List<KeyTransaction> roomKeyEvents = await db.KeyTransactions
+                .AsNoTracking()
+                .Include(transaction => transaction.Key)
+                .Include(transaction => transaction.Participant)
+                .Where(transaction => transaction.Key.AssignedRooms.Any(room =>
+                    room.RoomId == reservation.Room.RoomId))
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ThenByDescending(transaction => transaction.KeyTransactionId)
+                .ToListAsync();
+
+            bool participantAlreadyHasRoomKey = roomKeyEvents
+                .GroupBy(transaction => transaction.Key.KeyId)
+                .Select(group => group.First())
+                .Any(transaction =>
+                    transaction.Direction == TransactionDirection.Out &&
+                    transaction.Participant.Id == reservation.RequestedBy.Id);
+
+            if (participantAlreadyHasRoomKey)
+            {
+                return new(false,
+                    "Az oktatónál már van olyan kiadott kulcs, amely nyitja ezt a termet. " +
+                    "Második kulcs csak az előző visszavétele után adható ki.");
             }
 
             KeyTransaction? latest = await db.KeyTransactions
-                .Include(t => t.Key)
-                .Include(t => t.Participant)
-                .Where(t => t.Key.KeyId == keyId)
-                .OrderByDescending(t => t.Timestamp)
-                .ThenByDescending(t => t.KeyTransactionId)
+                .Where(transaction => transaction.Key.KeyId == keyId)
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ThenByDescending(transaction => transaction.KeyTransactionId)
                 .FirstOrDefaultAsync();
 
-            if (latest is null ||
-                latest.Direction != TransactionDirection.Out)
+            if (latest?.Direction == TransactionDirection.Out)
+            {
+                return new(false, "Ez a kulcs már ki van adva.");
+            }
+
+            db.KeyTransactions.Add(new KeyTransaction
+            {
+                KeyTransactionId = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow, // A kulcstranzakciók továbbra is UTC-időt használnak.
+                Direction = TransactionDirection.Out,
+                Key = key,
+                AuthorizedBy = operatorUser,
+                Participant = reservation.RequestedBy
+            });
+
+            try
+            {
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return new(false, "A kulcskiadás nem menthető. Frissítsd az adatokat és próbáld újra.");
+            }
+            catch (SqliteException)
+            {
+                return new(false, "A kulcs állapota időközben megváltozhatott. Frissítsd az adatokat.");
+            }
+
+            return new(true, "A kulcskiadás sikeresen rögzítve.");
+        }
+
+        // A visszavételhez nem szükséges aktív foglalás: egy lejárt vagy törölt
+        // foglalás kulcsát is vissza kell tudni venni.
+        public async Task<KeyOperationResult> ReturnAsync(Guid keyId, string? operatorId)
+        {
+            await using ApplicationDbContext db =
+                await dbFactory.CreateDbContextAsync();
+            await using IDbContextTransaction tx =
+                await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            ApplicationUser? operatorUser = await LoadJanitorAsync(db, operatorId);
+            if (operatorUser is null)
+            {
+                return new(false, "A visszavételhez portási jogosultság szükséges.");
+            }
+
+            KeyTransaction? latest = await db.KeyTransactions
+                .Include(transaction => transaction.Key)
+                .Include(transaction => transaction.Participant)
+                .Where(transaction => transaction.Key.KeyId == keyId)
+                .OrderByDescending(transaction => transaction.Timestamp)
+                .ThenByDescending(transaction => transaction.KeyTransactionId)
+                .FirstOrDefaultAsync();
+
+            if (latest is null || latest.Direction != TransactionDirection.Out)
             {
                 return new(false, "Ez a kulcs jelenleg nincs kiadva.");
             }
 
-            // visszavételi tranzakciót.
             db.KeyTransactions.Add(new KeyTransaction
             {
                 KeyTransactionId = Guid.NewGuid(),
@@ -215,15 +328,24 @@ namespace PeKeyMngr.Data
                 Participant = latest.Participant
             });
 
-            await db.SaveChangesAsync();
+            try
+            {
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return new(false, "A kulcs visszavételét nem sikerült menteni.");
+            }
+            catch (SqliteException)
+            {
+                return new(false, "Az adatbázis foglalt. Frissítsd az adatokat és próbáld újra.");
+            }
 
-            await tx.CommitAsync();
-
-            return new(
-                true,
-                "A kulcs visszavétele sikeresen rögzítve.");
+            return new(true, "A kulcs visszavétele sikeresen rögzítve.");
         }
 
+        // A jogosultság ellenőrzését nem csak a Razor oldal végzi.
         private static Task<ApplicationUser?> LoadJanitorAsync(
             ApplicationDbContext db,
             string? id)
@@ -233,11 +355,8 @@ namespace PeKeyMngr.Data
                 return Task.FromResult<ApplicationUser?>(null);
             }
 
-            return db.Users
-                .Include(u => u.Roles)
-                .FirstOrDefaultAsync(u =>
-                    u.Id == id &&
-                    u.Roles.Any(r => r.RoleName == "janitor"));
+            return db.Users.FirstOrDefaultAsync(user =>
+                user.Id == id && user.Roles.Any(role => role.RoleName == "janitor"));
         }
     }
 }
