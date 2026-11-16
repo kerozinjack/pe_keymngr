@@ -22,6 +22,8 @@ namespace PeKeyMngr.Data
         DateTime EndTime,
         List<JanitorKeyOption> Keys)
     {
+        public bool IsNoShow { get; init; }
+
         // A teremhez fizikailag hozzárendelt ÖSSZES kulcs azonosítója.
         // A teremstátuszhoz kell, függetlenül az adott oktató jogosultságaitól.
         // Ez csak a felületnek szánt adat, NEM új adatbázismező.
@@ -122,7 +124,8 @@ namespace PeKeyMngr.Data
                     reservation.EndTime,
                     matchingKeys)
                 {
-                    RoomKeyIds = roomKeyIds
+                    RoomKeyIds = roomKeyIds,
+                    IsNoShow = reservation.IsNoShow
                 });
             }
 

@@ -85,6 +85,8 @@ builder.Services.AddScoped<AuditLogWriter>();
 //builder.Services.AddScoped<JanitorTestClock>(); // Engedélyezd ha tesztelni akarod a portás dashboardon a holnapi foglalások listázása funkciót
 builder.Services.AddScoped<KeyManagementService>();
 
+builder.Services.AddHostedService<NoShowMonitorService>();
+
 WebApplication? app = builder.Build();
 // Apply database migrations
 using (IServiceScope? scope = app.Services.CreateScope())

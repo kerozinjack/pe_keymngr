@@ -42,6 +42,13 @@
                     <PropertyColumn Property="reservation => reservation.Room.RoomName" Title="Terem" />
                     <PropertyColumn Property="reservation => GetEquipments(reservation.ReservationId)" Title="Igényelt eszközök" />
 
+                    <TemplateColumn Context="reservation" Title="Állapot">
+                        @if (reservation.IsNoShow)
+                        {
+                            <span class="badge bg-danger">Nem jelent meg</span>
+                        }
+                    </TemplateColumn>
+
                     <TemplateColumn Context="reservation" Title="Műveletek">
                         <div class="d-flex flex-wrap gap-2">
                             @if (reservation.StartTime <= DateTime.Now)
