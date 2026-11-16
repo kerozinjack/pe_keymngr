@@ -4,9 +4,11 @@
 @using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PeKeyMngr.Data
+@using PeKeyMngr.Models
 @rendermode InteractiveServer
 @inject NavigationManager Nav
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject KeyManagementService KeyService
 
 <PageTitle>Kezdőlap – Terem- és kulcskezelő rendszer</PageTitle>
 
@@ -87,295 +89,256 @@
                     </div>
                 }
 
-                <!-- PORTÁS -->
+                <!-- PORTÁS: VALÓDI ADATOKBÓL ÉPÍTETT DASHBOARD -->
                 @if (SelectedRole == "Portás / Operátor")
                 {
                     <div class="col-12">
-
-                        <!-- PORTÁS DASHBOARD FEJLÉC -->
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                             <div>
                                 <h4 class="fw-bold mb-1">Kulcskezelési áttekintés</h4>
                                 <p class="text-muted mb-0">
-                                    Kulcskiadások, visszavételek és aktuális feladatok kezelése.
+                                    Kiadott kulcsok, visszavételek és a portaszolgálat aktuális teendői.
                                 </p>
                             </div>
-
-                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2">
-                                Portás / Operátor
-                            </span>
-                        </div>
-
-                        <!--
-                            IDEIGLENES TESZTADATOK
-
-                            TODO:
-                            A statisztikákat később a KeyTransaction és Key
-                            adatmodellek alapján, adatbázisból kell lekérdezni.
-                        -->
-                        <!-- STATISZTIKAI KÁRTYÁK -->
-                        <div class="row g-3 mb-4">
-
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-primary rounded">
-                                        <div class="text-muted small mb-2">
-                                            Kiadott kulcsok
-                                        </div>
-                                        <div class="fs-3 fw-bold text-dark">
-                                            12
-                                            <span class="fs-6 text-muted fw-normal">/ 48</span>
-                                        </div>
-                                        <div class="text-muted small mt-1">
-                                            Összes kulcsból
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-success rounded">
-                                        <div class="text-muted small mb-2">
-                                            Elérhető kulcsok
-                                        </div>
-                                        <div class="fs-3 fw-bold text-dark">
-                                            36
-                                        </div>
-                                        <div class="text-muted small mt-1">
-                                            Kiadásra rendelkezésre áll
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-danger rounded">
-                                        <div class="text-muted small mb-2">
-                                            Késésben lévő kulcsok
-                                        </div>
-                                        <div class="fs-3 fw-bold text-danger">
-                                            2
-                                        </div>
-                                        <div class="text-muted small mt-1">
-                                            Visszavételre vár
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-warning rounded">
-                                        <div class="text-muted small mb-2">
-                                            Mai visszavételek
-                                        </div>
-                                        <div class="fs-3 fw-bold text-dark">
-                                            8
-                                        </div>
-                                        <div class="text-muted small mt-1">
-                                            Sikeresen visszavett kulcs
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <!-- AKTÍV KULCSKIADÁSOK -->
-                        <div class="card border-0 shadow-sm mb-4">
-                            <div class="card-header bg-white border-bottom py-3 px-4">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                    <div>
-                                        <h5 class="fw-bold mb-1">Aktív kulcskiadások</h5>
-                                        <p class="text-muted small mb-0">
-                                            Jelenleg kiadott, visszavételre váró kulcsok.
-                                        </p>
-                                    </div>
-
-                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
-                                        Tesztadatok
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                @if (LastDashboardUpdate is not null)
+                                {
+                                    <span class="text-muted small">
+                                        Frissítve: @(LastDashboardUpdate.Value.ToString("yyyy.MM.dd. HH:mm:ss"))
                                     </span>
-                                </div>
-                            </div>
-
-                            <div class="card-body p-0">
-
-                                <!--
-                                    TODO:
-                                    A táblázat tartalmát később az adatbázisban
-                                    szereplő aktív kulcstranzakciók alapján kell
-                                    dinamikusan megjeleníteni.
-                                -->
-
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="ps-4">Kulcs</th>
-                                                <th>Átvevő</th>
-                                                <th>Kiadás ideje</th>
-                                                <th>Állapot</th>
-                                                <th class="text-end pe-4">Művelet</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            <tr>
-                                                <td class="ps-4 fw-semibold">I/102</td>
-                                                <td>Kovács Péter</td>
-                                                <td>08:15</td>
-                                                <td>
-                                                    <span class="badge bg-success-subtle text-success-emphasis">
-                                                        Kiadva
-                                                    </span>
-                                                </td>
-                                                <td class="text-end pe-4">
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-secondary"
-                                                            disabled>
-                                                        Visszavétel
-                                                    </button>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td class="ps-4 fw-semibold">I/205</td>
-                                                <td>Nagy Anna</td>
-                                                <td>07:30</td>
-                                                <td>
-                                                    <span class="badge bg-danger-subtle text-danger-emphasis">
-                                                        Késésben
-                                                    </span>
-                                                </td>
-                                                <td class="text-end pe-4">
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-secondary"
-                                                            disabled>
-                                                        Visszavétel
-                                                    </button>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td class="ps-4 fw-semibold">I/301</td>
-                                                <td>Szabó Gábor</td>
-                                                <td>09:10</td>
-                                                <td>
-                                                    <span class="badge bg-success-subtle text-success-emphasis">
-                                                        Kiadva
-                                                    </span>
-                                                </td>
-                                                <td class="text-end pe-4">
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-secondary"
-                                                            disabled>
-                                                        Visszavétel
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                            </div>
-
-                            <div class="card-footer bg-white border-top px-4 py-3">
-                                <span class="text-muted small">
-                                    A kulcskezelési műveletek és a PIN-kódos jóváhagyás fejlesztés alatt állnak.
+                                }
+                                <button type="button" class="btn btn-outline-secondary"
+                                        disabled="@IsDashboardLoading" @onclick="LoadJanitorDashboardAsync">
+                                    @(IsDashboardLoading ? "Frissítés..." : "Adatok frissítése")
+                                </button>
+                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2">
+                                    Portás / Operátor
                                 </span>
                             </div>
                         </div>
 
-                        <!-- GYORSMŰVELETEK ÉS FIGYELMEZTETÉSEK -->
-                        <div class="row g-3">
+                        @if (IsDashboardLoading && LastDashboardUpdate is null)
+                        {
+                            <div class="alert alert-info" role="status">A portás dashboard betöltése folyamatban...</div>
+                        }
+                        else if (DashboardError is not null)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @DashboardError
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Valós összesített statisztikák -->
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3 mb-4">
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-primary rounded">
+                                            <div class="text-muted small mb-2">Kiadott kulcsok</div>
+                                            <div class="fs-3 fw-bold">@ActiveKeyRows.Count <span class="fs-6 text-muted fw-normal">/ @TotalKeyCount</span></div>
+                                            <div class="text-muted small">Jelenleg kint lévő fizikai kulcsok</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-success rounded">
+                                            <div class="text-muted small mb-2">Elérhető kulcsok</div>
+                                            <div class="fs-3 fw-bold">@AvailableKeyCount</div>
+                                            <div class="text-muted small">Jelenleg a portán lévő kulcsok</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-danger rounded">
+                                            <div class="text-muted small mb-2">Késésben lévő kulcsok</div>
+                                            <div class="fs-3 fw-bold text-danger">@OverdueKeyCount</div>
+                                            <div class="text-muted small">Foglalás vége + 15 perc után</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-info rounded">
+                                            <div class="text-muted small mb-2">Mai visszavételek</div>
+                                            <div class="fs-3 fw-bold">@TodayReturnCount</div>
+                                            <div class="text-muted small">Ma rögzített visszavételi műveletek</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-secondary rounded">
+                                            <div class="text-muted small mb-2">Mai foglalások</div>
+                                            <div class="fs-3 fw-bold">@TodayReservationCount</div>
+                                            <div class="text-muted small">A mai napot érintő foglalások</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-warning rounded">
+                                            <div class="text-muted small mb-2">Karbantartás alatt</div>
+                                            <div class="fs-3 fw-bold">@ActiveMaintenanceRows.Count <span class="fs-6 text-muted fw-normal">terem</span></div>
+                                            <div class="text-muted small">Aktuálisan érintett termek</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <!-- GYORSMŰVELETEK -->
-                            <div class="col-12 col-lg-7">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-4">
+                            <!-- MINDEN aktív kiadás, a korábbi napokról maradtak is -->
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-body border-bottom py-3 px-4">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <div>
+                                            <h5 class="fw-bold mb-1">Aktív kulcskiadások</h5>
+                                            <p class="text-muted small mb-0">Minden jelenleg kiadott kulcs, a kiadás napjától függetlenül.</p>
+                                        </div>
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                                            @ActiveKeyRows.Count aktív
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    @if (ActiveKeyRows.Count == 0)
+                                    {
+                                        <div class="text-center text-muted py-4 px-3">
+                                            Jelenleg nincs kiadott kulcs.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="ps-4">Kulcs</th>
+                                                        <th>Átvevő</th>
+                                                        <th>Kiadás időpontja</th>
+                                                        <th>Visszavételi határ</th>
+                                                        <th>Állapot</th>
+                                                        <th class="text-end pe-4">Művelet</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (DashboardKeyRow issue in ActiveKeyRows)
+                                                    {
+                                                        <tr @key="issue.KeyId">
+                                                            <td class="ps-4 fw-semibold">@issue.KeyName</td>
+                                                            <td>@issue.ParticipantName</td>
+                                                            <td class="text-nowrap">@(issue.IssuedAtLocal.ToString("yyyy.MM.dd. HH:mm"))</td>
+                                                            <td class="text-nowrap">
+                                                                @if (issue.DueAtLocal is not null)
+                                                                {
+                                                                    <div>@(issue.DueAtLocal.Value.ToString("yyyy.MM.dd. HH:mm"))</div>
+                                                                    @if (issue.IsDueEstimated)
+                                                                    {
+                                                                        <div class="small text-warning-emphasis">Becsült határidő</div>
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-muted">Nem meghatározható</span>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(issue.DueMatchNote))
+                                                                {
+                                                                    <div class="small text-muted">@issue.DueMatchNote</div>
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                @if (issue.IsOverdue)
+                                                                {
+                                                                    <span class="badge bg-danger-subtle text-danger-emphasis">Késésben</span>
+                                                                }
+                                                                else if (issue.IsDueEstimated)
+                                                                {
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis">Kiadva · becsült határidő</span>
+                                                                }
+                                                                else if (issue.DueAtLocal is null)
+                                                                {
+                                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">Kiadva · nem párosítható</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-success-subtle text-success-emphasis">Kiadva</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-end pe-4">
+                                                                <a href="/keymanagement" class="btn btn-sm btn-outline-primary">
+                                                                    Kulcskezelés
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="card-footer bg-body border-top px-4 py-3 text-muted small">
+                                    A visszavétel a Kulcskezelés oldalon végezhető el. A PIN-kódos jóváhagyás továbbra is fejlesztés alatt áll.
+                                    A visszavételi határidőt a foglalás vége + 15 perc alapján számoljuk.
+                                    Több megfelelő foglalás esetén becsült időpont jelenik meg, amelyből nem számolunk biztos késést.
+                                </div>
+                            </div>
 
-                                        <h5 class="fw-bold mb-1">Gyorsműveletek</h5>
-                                        <p class="text-muted small mb-4">
-                                            A portaszolgálat leggyakrabban használt funkciói.
-                                        </p>
-
-                                        <div class="row g-3">
-
-                                            <div class="col-12 col-sm-12">
-                                                <a href="/keymanagement" class="btn btn-primary">
-                                                    Kulcskezelés
+                            <div class="row g-3">
+                                <!-- GYORSMŰVELETEK -->
+                                <div class="col-12 col-lg-7">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-1">Gyorsműveletek</h5>
+                                            <p class="text-muted small mb-4">A portaszolgálat leggyakrabban használt funkciói.</p>
+                                            <div class="d-grid gap-3">
+                                                <a href="/keymanagement" class="btn btn-primary btn-lg py-3 fw-semibold">
+                                                    Kulcskezelés – kiadás és visszavétel
                                                 </a>
-                                            </div>
-
-                                            <div class="col-12">
-                                                <a href="/issuetickets"
-                                                   class="btn btn-outline-secondary w-100 py-3">
+                                                <a href="/issuetickets" class="btn btn-outline-secondary py-3">
                                                     Hibajegyek kezelése
                                                 </a>
                                             </div>
-
                                         </div>
+                                    </div>
+                                </div>
 
-                                        <div class="text-muted small mt-3">
-                                            A kulcskiadás és visszavétel funkciói hamarosan elérhetők.
+                                <!-- Csak az azonosítható késő kulcsok és aktív karbantartások -->
+                                <div class="col-12 col-lg-5">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-1">Figyelmeztetések</h5>
+                                            <p class="text-muted small mb-4">Késő kulcsok és jelenleg karbantartás alatt álló termek.</p>
+
+                                            @if (OverdueKeyCount == 0 && ActiveMaintenanceRows.Count == 0)
+                                            {
+                                                <div class="alert alert-success mb-0" role="status">
+                                                    Nincs aktív figyelmeztetés.
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (DashboardKeyRow lateKey in ActiveKeyRows.Where(issue => issue.IsOverdue))
+                                                {
+                                                    <div class="alert alert-danger mb-3" role="alert" @key="lateKey.KeyId">
+                                                        <div class="fw-semibold">Késésben: @lateKey.KeyName</div>
+                                                        <div class="small">Átvevő: @lateKey.ParticipantName</div>
+                                                        <div class="small">Visszavételi határ: @(lateKey.DueAtLocal?.ToString("yyyy.MM.dd. HH:mm"))</div>
+                                                    </div>
+                                                }
+                                                @foreach (DashboardMaintenanceRow maintenance in ActiveMaintenanceRows)
+                                                {
+                                                    <div class="alert alert-warning mb-3" role="alert" @key="maintenance.RoomId">
+                                                        <div class="fw-semibold">Karbantartás alatt: @maintenance.RoomName</div>
+                                                        <div class="small">@maintenance.Building / @maintenance.Floor</div>
+                                                        <div class="small">Várható vég: @(maintenance.EndTime.ToString("yyyy.MM.dd. HH:mm"))</div>
+                                                    </div>
+                                                }
+                                            }
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- FIGYELMEZTETÉSEK -->
-                            <div class="col-12 col-lg-5">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-4">
-
-                                        <h5 class="fw-bold mb-1">Figyelmeztetések</h5>
-                                        <p class="text-muted small mb-4">
-                                            Figyelmet igénylő kulcskezelési események.
-                                        </p>
-
-                                        <!-- IDEIGLENES TESZTADATOK -->
-                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-3"
-                                             role="alert">
-                                            <span>⚠️</span>
-                                            <div>
-                                                <div class="fw-semibold">
-                                                    Késésben lévő kulcs
-                                                </div>
-                                                <div class="small">
-                                                    I/205 – Nagy Anna
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-0"
-                                             role="alert">
-                                            <span>ℹ️</span>
-                                            <div>
-                                                <div class="fw-semibold">
-                                                    Karbantartás alatt
-                                                </div>
-                                                <div class="small">
-                                                    I/104 – A terem ideiglenesen nem használható.
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!--
-                                            TODO:
-                                            A figyelmeztetéseket később valós
-                                            kulcs- és karbantartási adatokból
-                                            kell előállítani.
-                                        -->
-
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
+                        }
                     </div>
                 }
 
@@ -564,6 +527,35 @@
     private string? ActualRole { get; set; }
     private string? SelectedRole { get; set; }
 
+    // Csak a portás kezdőlapjára vonatkozó, megjelenítési adatok.
+    private sealed record DashboardKeyRow(
+        Guid KeyId,
+        string KeyName,
+        string ParticipantName,
+        DateTime IssuedAtLocal,
+        DateTime? DueAtLocal,
+        bool IsOverdue,
+        bool IsDueEstimated,
+        string DueMatchNote);
+
+    private sealed record DashboardMaintenanceRow(
+        Guid RoomId,
+        string RoomName,
+        string Building,
+        string Floor,
+        DateTime EndTime);
+
+    private List<DashboardKeyRow> ActiveKeyRows { get; set; } = [];
+    private List<DashboardMaintenanceRow> ActiveMaintenanceRows { get; set; } = [];
+    private int TotalKeyCount { get; set; }
+    private int AvailableKeyCount { get; set; }
+    private int OverdueKeyCount { get; set; }
+    private int TodayReturnCount { get; set; }
+    private int TodayReservationCount { get; set; }
+    private DateTime? LastDashboardUpdate { get; set; }
+    private bool IsDashboardLoading { get; set; }
+    private string? DashboardError { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         if (AuthenticationStateTask is null)
@@ -572,22 +564,24 @@
             return;
         }
 
-        var authenticationState = await AuthenticationStateTask;
-        var principal = authenticationState.User;
+        AuthenticationState authenticationState = await AuthenticationStateTask;
+        ClaimsPrincipal principal = authenticationState.User;
 
         if (principal.Identity?.IsAuthenticated == true)
         {
-            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            string? userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!string.IsNullOrWhiteSpace(userId))
             {
-                await using var db = await DbFactory.CreateDbContextAsync();
-                var user = await db.Users
+                await using ApplicationDbContext db = await DbFactory.CreateDbContextAsync();
+                ApplicationUser? user = await db.Users
                     .AsNoTracking()
                     .Include(u => u.Roles)
                     .FirstOrDefaultAsync(u => u.Id == userId);
 
-                var roles = user?.Roles.Select(role => role.RoleName).ToHashSet(StringComparer.Ordinal);
+                HashSet<string>? roles = user?.Roles
+                    .Select(role => role.RoleName)
+                    .ToHashSet(StringComparer.Ordinal);
 
                 ActualRole = roles is null ? null
                     : roles.Contains("admin") ? "Adminisztrátor"
@@ -600,7 +594,180 @@
 
         SelectedRole = ActualRole;
         IsRoleLoaded = true;
+
+        // A portás dashboard adatait csak a tényleges portási szerepkörnél töltjük.
+        if (ActualRole == "Portás / Operátor")
+        {
+            await LoadJanitorDashboardAsync();
+        }
     }
 
     private void ResetRoleSelection() => SelectedRole = ActualRole;
+
+    private async Task LoadJanitorDashboardAsync()
+    {
+        if (ActualRole != "Portás / Operátor" || IsDashboardLoading)
+        {
+            return;
+        }
+
+        IsDashboardLoading = true;
+        DashboardError = null;
+
+        try
+        {
+           
+            DateTime now = DateTime.Now;
+            DateTime today = now.Date;
+            DateTime tomorrow = today.AddDays(1);
+
+            // A meglévő KeyManagementService kezeli a fizikai kulcsok Out/In állapotát,
+            // Master kulcsok esetében is. A korábbi napok aktív kiadásai is benne vannak.
+            List<ActiveKeyIssue> activeIssues = await KeyService.GetActiveIssuesAsync();
+
+            await using ApplicationDbContext db = await DbFactory.CreateDbContextAsync();
+            int totalKeys = await db.Keys.AsNoTracking().CountAsync();
+
+            DateTime utcStart = TimeZoneInfo.ConvertTimeToUtc(today);
+            DateTime utcEnd = TimeZoneInfo.ConvertTimeToUtc(tomorrow);
+
+            int returnsToday = await db.KeyTransactions
+                .AsNoTracking()
+                .CountAsync(transaction =>
+                    transaction.Direction == TransactionDirection.In &&
+                    transaction.Timestamp >= utcStart &&
+                    transaction.Timestamp < utcEnd);
+
+            int reservationsToday = await db.Reservations
+                .AsNoTracking()
+                .CountAsync(reservation =>
+                    reservation.StartTime < tomorrow &&
+                    reservation.EndTime > today);
+
+            DateTime earliestIssueDate = activeIssues.Count == 0
+                ? today
+                : activeIssues.Min(issue => ToLocalDateTime(issue.IssuedAtUtc)).Date;
+
+            DateTime latestIssueDayEnd = activeIssues.Count == 0
+                ? tomorrow
+                : activeIssues.Max(issue => ToLocalDateTime(issue.IssuedAtUtc)).Date.AddDays(1);
+
+            List<Reservation> reservations = activeIssues.Count == 0
+                ? []
+                : await db.Reservations
+                    .AsNoTracking()
+                    .Include(reservation => reservation.Room)
+                    .Include(reservation => reservation.RequestedBy)
+                    .Where(reservation =>
+                        reservation.StartTime < latestIssueDayEnd &&
+                        reservation.EndTime > earliestIssueDate)
+                    .AsSplitQuery()
+                    .ToListAsync();
+
+            List<DashboardKeyRow> keyRows = [];
+
+            foreach (ActiveKeyIssue issue in activeIssues)
+            {
+                DateTime issuedAtLocal = ToLocalDateTime(issue.IssuedAtUtc);
+                DateTime issueDay = issuedAtLocal.Date;
+                DateTime nextIssueDay = issueDay.AddDays(1);
+
+                List<Reservation> sameDayCandidates = reservations
+                    .Where(reservation =>
+                        reservation.RequestedBy.Id == issue.ParticipantId &&
+                        issue.AssignedRoomIds.Contains(reservation.Room.RoomId) &&
+                        reservation.StartTime < nextIssueDay &&
+                        reservation.EndTime > issueDay)
+                    .ToList();
+
+                DateTime? dueAtLocal = null;
+                bool isDueEstimated = false;
+                string note = string.Empty;
+
+                if (sameDayCandidates.Count == 1)
+                {
+                    dueAtLocal = sameDayCandidates[0].EndTime.AddMinutes(15);
+                }
+                else if (sameDayCandidates.Count > 1)
+                {
+                    Reservation closest = sameDayCandidates
+                        .OrderBy(reservation =>
+                            Math.Abs((reservation.StartTime - issuedAtLocal).TotalMinutes))
+                        .ThenBy(reservation => reservation.StartTime)
+                        .First();
+
+                    dueAtLocal = closest.EndTime.AddMinutes(15);
+                    isDueEstimated = true;
+                    note = $"{sameDayCandidates.Count} lehetséges foglalás";
+                }
+                else
+                {
+                    note = "Nincs illeszkedő foglalás a kiadás napján";
+                }
+
+                keyRows.Add(new DashboardKeyRow(
+                    issue.KeyId,
+                    issue.KeyName,
+                    issue.ParticipantName,
+                    issuedAtLocal,
+                    dueAtLocal,
+                    dueAtLocal is not null && !isDueEstimated && now > dueAtLocal.Value,
+                    isDueEstimated,
+                    note));
+            }
+
+            // Karbantartás alatt csak az a terem van, amelyet egy MOST aktív
+            // MaintenanceWindow érint. Több ablak ugyanarra a teremre egy figyelmeztetés.
+            List<MaintenanceWindow> maintenanceWindows = await db.MaintenanceWindows
+                .AsNoTracking()
+                .Include(window => window.AffectedRooms)
+                .Where(window => window.StartTime <= now && window.EndTime > now)
+                .AsSplitQuery()
+                .ToListAsync();
+
+            List<DashboardMaintenanceRow> maintenanceRows = maintenanceWindows
+                .SelectMany(window => window.AffectedRooms.Select(room => new DashboardMaintenanceRow(
+                    room.RoomId,
+                    room.RoomName,
+                    room.Building,
+                    room.Floor,
+                    window.EndTime)))
+                .GroupBy(row => row.RoomId)
+                .Select(group => group.OrderByDescending(row => row.EndTime).First())
+                .OrderBy(row => row.Building)
+                .ThenBy(row => row.Floor)
+                .ThenBy(row => row.RoomName)
+                .ToList();
+
+            // Csak teljes siker esetén írjuk felül a képernyő adatállapotát.
+            ActiveKeyRows = keyRows
+                .OrderByDescending(row => row.IsOverdue)
+                .ThenBy(row => row.IssuedAtLocal)
+                .ToList();
+            ActiveMaintenanceRows = maintenanceRows;
+            TotalKeyCount = totalKeys;
+            AvailableKeyCount = Math.Max(0, totalKeys - activeIssues.Count);
+            OverdueKeyCount = keyRows.Count(row => row.IsOverdue);
+            TodayReturnCount = returnsToday;
+            TodayReservationCount = reservationsToday;
+            LastDashboardUpdate = now;
+        }
+        catch (Exception)
+        {
+            // Nem mutatunk fiktív nullákat adatbázishiba esetén.
+            DashboardError = "Nem sikerült betölteni a portás dashboard adatait. Próbáld újra a frissítést.";
+        }
+        finally
+        {
+            IsDashboardLoading = false;
+        }
+    }
+
+    private static DateTime ToLocalDateTime(DateTime utcTimestamp)
+    {
+        // Az SQLite-ból kiolvasott DateTime.Kind lehet Unspecified.
+        // A KeyManagementService a kulcstranzakciókat DateTime.UtcNow-val menti.
+        DateTime correctlyMarkedUtc = DateTime.SpecifyKind(utcTimestamp, DateTimeKind.Utc);
+        return correctlyMarkedUtc.ToLocalTime();
+    }
 }

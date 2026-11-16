@@ -82,6 +82,7 @@ builder.Services.AddScoped<AuditActorProvider>();
 builder.Services.AddScoped<AuditLogWriter>();
 
 // Portás kulcskezelési szolgáltatása.
+//builder.Services.AddScoped<JanitorTestClock>(); // Engedélyezd ha tesztelni akarod a portás dashboardon a holnapi foglalások listázása funkciót
 builder.Services.AddScoped<KeyManagementService>();
 
 WebApplication? app = builder.Build();
