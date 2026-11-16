@@ -50,12 +50,12 @@
                         <dl class="row mb-0">
                             <dt class="col-sm-4 text-muted">Kezdés időpontja</dt>
                             <dd class="col-sm-8 fw-semibold">
-                                @maintenancewindow.StartTime
+                                @maintenancewindow.StartTime.ToString("yyyy.MM.dd. HH:mm")
                             </dd>
 
                             <dt class="col-sm-4 text-muted">Befejezés időpontja</dt>
                             <dd class="col-sm-8 fw-semibold">
-                                @maintenancewindow.EndTime
+                                @maintenancewindow.EndTime.ToString("yyyy.MM.dd. HH:mm")
                             </dd>
                         </dl>
                     </div>

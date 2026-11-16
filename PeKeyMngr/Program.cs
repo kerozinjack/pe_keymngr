@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using PeKeyMngr.Authorization;
 using PeKeyMngr.Components;
 using PeKeyMngr.Components.Account;
 using PeKeyMngr.Data;
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("hu-HU");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("hu-HU");
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 

@@ -216,15 +216,15 @@
                                                     aria-pressed="@(selectedRoomId == room.RoomId)"
                                                     disabled="@isBusy"
                                                     @onclick="() => SelectRoom(room.RoomId)">
-                                                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                                                    <div class="fw-bold fs-5 text-dark text-break">@room.DisplayName</div>
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                                    <div class="fw-bold fs-5 text-dark text-break flex-shrink-0 mw-100">@room.DisplayName</div>
                                                     <span class="badge @(GetRoomStatusBadgeClass(GetRoomKeyStatus(room))) text-nowrap">
                                                         @GetRoomStatusLabel(GetRoomKeyStatus(room))
                                                     </span>
                                                 </div>
                                                 <div class="text-muted small text-break">@room.Building</div>
                                                 <div class="text-muted small mb-3">@room.Floor</div>
-                                                <div class="mt-auto d-flex justify-content-between align-items-center gap-2 border-top pt-2 small">
+                                                <div class="mt-auto d-flex flex-column align-items-start gap-1 border-top pt-2 small">
                                                     <span class="text-secondary">@room.Reservations.Count foglalás • @AvailableKeysForRoom(room) szabad / @room.KeyIds.Count összes kulcs</span>
                                                     <span class="@(selectedRoomId == room.RoomId ? "text-primary" : "text-muted") fw-semibold">
                                                         @(selectedRoomId == room.RoomId ? "Kiválasztva" : "Részletek")
@@ -289,7 +289,7 @@
                                             disabled="@isBusy"
                                             aria-pressed="@(selectedReservationId == reservation.ReservationId)"
                                             @onclick="() => SelectReservation(reservation.ReservationId)">
-                                        <span class="d-block fw-semibold">@reservation.StartTime.ToString("HH:mm")–@reservation.EndTime.ToString("HH:mm")</span>
+                                        <span class="d-block fw-semibold">@reservation.StartTime.ToString("yyyy.MM.dd. HH:mm") – @reservation.EndTime.ToString("yyyy.MM.dd. HH:mm")</span>
                                         <span class="d-block small text-break">@reservation.ParticipantName</span>
                                         <span class="d-block small">@GetReservationStatus(reservation)</span>
                                     </button>
@@ -306,7 +306,7 @@
                             {
                                 <div class="rounded-3 border p-3 mb-3 small">
                                     <div><strong>Oktató:</strong> @SelectedReservation.ParticipantName</div>
-                                    <div><strong>Időpont:</strong> @SelectedReservation.StartTime.ToString("yyyy.MM.dd. HH:mm") – @SelectedReservation.EndTime.ToString("HH:mm")</div>
+                                    <div><strong>Időpont:</strong> @SelectedReservation.StartTime.ToString("yyyy.MM.dd. HH:mm") – @SelectedReservation.EndTime.ToString("yyyy.MM.dd. HH:mm")</div>
                                 </div>
 
                                 @if (AlreadyHasRoomKey(SelectedReservation))
@@ -382,7 +382,7 @@
                                 <tr>
                                     <th class="ps-4">Kulcs</th>
                                     <th>Átvevő</th>
-                                    <th>Kiadva (UTC)</th>
+                                    <th>Kiadva</th>
                                     <th class="text-end pe-4">Művelet</th>
                                 </tr>
                             </thead>
@@ -392,7 +392,7 @@
                                     <tr @key="issue.TransactionId">
                                         <td class="ps-4 fw-semibold">@issue.KeyName</td>
                                         <td>@issue.ParticipantName</td>
-                                        <td>@issue.IssuedAtUtc.ToString("yyyy.MM.dd. HH:mm")</td>
+                                        <td>@DateTime.SpecifyKind(issue.IssuedAtUtc, DateTimeKind.Utc).ToLocalTime().ToString("yyyy.MM.dd. HH:mm")</td>
                                         <td class="text-end pe-4">
                                             <button type="button" class="btn btn-sm btn-outline-success"
                                                     disabled="@isBusy" @onclick="() => ReturnAsync(issue.KeyId)">
