@@ -89,7 +89,7 @@
                     </div>
                 }
 
-                <!-- PORTÁS: VALÓDI ADATOKBÓL ÉPÍTETT DASHBOARD -->
+                <!-- PORTÁS -->
                 @if (SelectedRole == "Portás / Operátor")
                 {
                     <div class="col-12">
@@ -129,7 +129,7 @@
                         }
                         else
                         {
-                            <!-- Valós összesített statisztikák -->
+                            <!-- statisztikák -->
                             <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3 mb-4">
                                 <div class="col">
                                     <div class="card h-100 border-0 shadow-sm">
@@ -347,69 +347,211 @@
                 @if (SelectedRole == "Adminisztrátor")
                 {
                     <div class="col-12">
-                        <div class="mb-4">
-                            <h4 class="fw-bold mb-1">Rendszeráttekintés</h4>
-                            <p class="text-muted mb-0">
-                                A rendszer aktuális állapotának és legfontosabb adatainak áttekintése.
-                            </p>
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <h4 class="fw-bold mb-1">Adminisztrátori áttekintés</h4>
+                                <p class="text-muted mb-0">
+                                    Termek, felszerelések és egyéb nyilvántartások aktuális állapota.
+                                </p>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                @if (LastAdminDashboardUpdate is not null)
+                                {
+                                    <span class="text-muted small">
+                                        Frissítve: @(LastAdminDashboardUpdate.Value.ToString("yyyy.MM.dd. HH:mm:ss"))
+                                    </span>
+                                }
+                                <button type="button" class="btn btn-outline-secondary"
+                                        disabled="@IsAdminDashboardLoading" @onclick="LoadAdminDashboardAsync">
+                                    @(IsAdminDashboardLoading ? "Frissítés..." : "Adatok frissítése")
+                                </button>
+                                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2">
+                                    Adminisztrátor
+                                </span>
+                            </div>
                         </div>
 
-                        <!-- IDEIGLENES TESZTADATOK
-                             TODO: Később valódi adatbázis-lekérdezésekre kell cserélni. -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-primary rounded">
-                                        <div class="text-muted small mb-1">Kiadott kulcsok</div>
-                                        <div class="fs-3 fw-bold text-dark">
-                                            12 <span class="fs-6 text-muted fw-normal">/ 48</span>
+                        @if (IsAdminDashboardLoading && LastAdminDashboardUpdate is null)
+                        {
+                            <div class="alert alert-info" role="status">Az admin dashboard betöltése folyamatban...</div>
+                        }
+                        else if (AdminDashboardError is not null)
+                        {
+                            <div class="alert alert-danger" role="alert">@AdminDashboardError</div>
+                        }
+                        else if (LastAdminDashboardUpdate is not null)
+                        {
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3 mb-4">
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-primary rounded">
+                                            <div class="text-muted small mb-2">Nyilvántartott termek</div>
+                                            <div class="fs-3 fw-bold">@AdminRoomCount</div>
+                                            <div class="text-muted small">@AdminBuildingRows.Count épületben</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-success rounded">
+                                            <div class="text-muted small mb-2">Felszerelések</div>
+                                            <div class="fs-3 fw-bold">@AdminEquipmentCount</div>
+                                            <div class="text-muted small">Nyilvántartott felszereléstípusok</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-info rounded">
+                                            <div class="text-muted small mb-2">Kulcsok</div>
+                                            <div class="fs-3 fw-bold">@AdminKeyCount</div>
+                                            <div class="text-muted small">Nyilvántartott fizikai kulcsok</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-secondary rounded">
+                                            <div class="text-muted small mb-2">Szerepkörök</div>
+                                            <div class="fs-3 fw-bold">@AdminRoleCount</div>
+                                            <div class="text-muted small">Egyedi rendszer-szerepkörök</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-dark rounded">
+                                            <div class="text-muted small mb-2">Felhasználók</div>
+                                            <div class="fs-3 fw-bold">@AdminUserCount</div>
+                                            <div class="text-muted small">Regisztrált felhasználói fiókok</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3 border-start border-4 border-warning rounded">
+                                            <div class="text-muted small mb-2">Aktív karbantartások</div>
+                                            <div class="fs-3 fw-bold">@AdminActiveMaintenanceCount</div>
+                                            <div class="text-muted small">Összesen @AdminTotalMaintenanceCount időszak</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-success rounded">
-                                        <div class="text-muted small mb-1">Mai foglalások</div>
-                                        <div class="fs-3 fw-bold text-dark">24</div>
+                            <div class="row g-3 mb-4">
+                                <!-- admin CRUD oldalak -->
+                                <div class="col-12 col-lg-7">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-1">Adminisztráció</h5>
+                                            <p class="text-muted small mb-4">Nyilvántartások megtekintése és karbantartása.</p>
+                                            <div class="row g-2">
+                                                <div class="col-12 col-sm-6">
+                                                    <a href="/rooms" class="btn btn-primary w-100">Termek kezelése</a>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <a href="/equipment" class="btn btn-outline-primary w-100">Felszerelések</a>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <a href="/keys" class="btn btn-outline-primary w-100">Kulcsok</a>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <a href="/roles" class="btn btn-outline-primary w-100">Szerepkörök</a>
+                                                </div>
+                                                <div class="col-12 col-sm-6">
+                                                    <a href="/users" class="btn btn-outline-primary w-100">Felhasználók és jogosultságok</a>
+                                                </div>
+                                                <div class="col-12">
+                                                    <a href="/maintenancewindows" class="btn btn-outline-secondary w-100">
+                                                        Karbantartási időszakok
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-danger rounded">
-                                        <div class="text-muted small mb-1">Késésben lévő kulcsok</div>
-                                        <div class="fs-3 fw-bold text-danger">2</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-6 col-xl-3">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-body p-3 border-start border-4 border-warning rounded">
-                                        <div class="text-muted small mb-1">Karbantartás alatt</div>
-                                        <div class="fs-3 fw-bold text-dark">1 terem</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="card h-100 shadow-sm border-0">
-                                    <div class="card-body p-4">
-                                        <div class="d-grid gap-2">
-                                            <a href="/rooms" class="btn btn-outline-secondary">Termek</a>
-                                            <a href="/equipment" class="btn btn-outline-secondary">Felszerelések</a>
-                                            <a href="/keys" class="btn btn-outline-secondary">Kulcsok</a>
-                                            <a href="/roles" class="btn btn-outline-secondary">Szerepkörök</a>
-                                            <a href="/maintenancewindows" class="btn btn-outline-secondary">Karbantartási időszakok</a>
+                                <!-- Teremállomány -->
+                                <div class="col-12 col-lg-5">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-4">
+                                            <h5 class="fw-bold mb-1">Termek épületenként</h5>
+                                            <p class="text-muted small mb-3">Az adatbázisban nyilvántartott helyiségek eloszlása.</p>
+                                            @if (AdminBuildingRows.Count == 0)
+                                            {
+                                                <div class="text-muted small">Még nincs rögzített terem.</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="list-group list-group-flush">
+                                                    @foreach (AdminBuildingRow building in AdminBuildingRows)
+                                                    {
+                                                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2" @key="building.Name">
+                                                            <span class="text-break">@building.Name</span>
+                                                            <span class="badge bg-secondary-subtle text-secondary-emphasis">@building.RoomCount terem</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+
+                            <!-- karbantartási adatok-->
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-body border-bottom px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Aktuális és közelgő karbantartások</h5>
+                                        <p class="text-muted small mb-0">A következő legfeljebb öt érintett időszak.</p>
+                                    </div>
+                                    <a href="/maintenancewindows" class="btn btn-sm btn-outline-primary">Összes karbantartás</a>
+                                </div>
+                                <div class="card-body p-0">
+                                    @if (AdminMaintenanceRows.Count == 0)
+                                    {
+                                        <div class="text-center text-muted py-4 px-3">
+                                            Nincs aktív vagy közelgő karbantartási időszak.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="ps-4">Érintett termek</th>
+                                                        <th>Időszak kezdete</th>
+                                                        <th>Időszak vége</th>
+                                                        <th class="text-end pe-4">Állapot</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (AdminMaintenanceRow maintenance in AdminMaintenanceRows)
+                                                    {
+                                                        <tr @key="maintenance.Id">
+                                                            <td class="ps-4">@maintenance.RoomNames</td>
+                                                            <td class="text-nowrap">@(maintenance.StartTime.ToString("yyyy.MM.dd. HH:mm"))</td>
+                                                            <td class="text-nowrap">@(maintenance.EndTime.ToString("yyyy.MM.dd. HH:mm"))</td>
+                                                            <td class="text-end pe-4">
+                                                                @if (maintenance.IsActive)
+                                                                {
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis">Folyamatban</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-info-subtle text-info-emphasis">Közelgő</span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
 
@@ -527,7 +669,7 @@
     private string? ActualRole { get; set; }
     private string? SelectedRole { get; set; }
 
-    // Csak a portás kezdőlapjára vonatkozó, megjelenítési adatok.
+    // portás kezdőlap
     private sealed record DashboardKeyRow(
         Guid KeyId,
         string KeyName,
@@ -555,6 +697,24 @@
     private DateTime? LastDashboardUpdate { get; set; }
     private bool IsDashboardLoading { get; set; }
     private string? DashboardError { get; set; }
+
+    // Adminisztrátori kezdőlap
+    private sealed record AdminBuildingRow(string Name, int RoomCount);
+    private sealed record AdminMaintenanceRow(
+        Guid Id, DateTime StartTime, DateTime EndTime, string RoomNames, bool IsActive);
+
+    private List<AdminBuildingRow> AdminBuildingRows { get; set; } = [];
+    private List<AdminMaintenanceRow> AdminMaintenanceRows { get; set; } = [];
+    private int AdminRoomCount { get; set; }
+    private int AdminEquipmentCount { get; set; }
+    private int AdminKeyCount { get; set; }
+    private int AdminRoleCount { get; set; }
+    private int AdminUserCount { get; set; }
+    private int AdminTotalMaintenanceCount { get; set; }
+    private int AdminActiveMaintenanceCount { get; set; }
+    private DateTime? LastAdminDashboardUpdate { get; set; }
+    private bool IsAdminDashboardLoading { get; set; }
+    private string? AdminDashboardError { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -595,14 +755,102 @@
         SelectedRole = ActualRole;
         IsRoleLoaded = true;
 
-        // A portás dashboard adatait csak a tényleges portási szerepkörnél töltjük.
         if (ActualRole == "Portás / Operátor")
         {
             await LoadJanitorDashboardAsync();
         }
+        else if (ActualRole == "Adminisztrátor")
+        {
+            await LoadAdminDashboardAsync();
+        }
     }
 
     private void ResetRoleSelection() => SelectedRole = ActualRole;
+
+    private async Task LoadAdminDashboardAsync()
+    {
+        if (ActualRole != "Adminisztrátor" || IsAdminDashboardLoading)
+        {
+            return;
+        }
+
+        IsAdminDashboardLoading = true;
+        AdminDashboardError = null;
+
+        try
+        {
+            DateTime now = DateTime.Now;
+            await using ApplicationDbContext db = await DbFactory.CreateDbContextAsync();
+
+            List<string> buildings = await db.Rooms
+                .AsNoTracking()
+                .Select(room => room.Building)
+                .ToListAsync();
+
+            List<AdminBuildingRow> buildingRows = buildings
+                .GroupBy(building => string.IsNullOrWhiteSpace(building)
+                    ? "Nincs megadva"
+                    : building.Trim())
+                .Select(group => new AdminBuildingRow(group.Key, group.Count()))
+                .OrderBy(row => row.Name)
+                .ToList();
+
+            // admin statisztikak
+            int equipmentCount = await db.Equipments.AsNoTracking().CountAsync();
+            int keyCount = await db.Keys.AsNoTracking().CountAsync();
+            int roleCount = await db.CustomRoles.AsNoTracking().CountAsync();
+            int userCount = await db.Users.AsNoTracking().CountAsync();
+            int allMaintenanceCount = await db.MaintenanceWindows.AsNoTracking().CountAsync();
+            int activeMaintenanceCount = await db.MaintenanceWindows
+                .AsNoTracking()
+                .CountAsync(window => window.StartTime <= now && window.EndTime > now);
+
+            // aktuális vagy jövőbeni karbantartások
+            List<MaintenanceWindow> maintenanceWindows = await db.MaintenanceWindows
+                .AsNoTracking()
+                .Include(window => window.AffectedRooms)
+                .Where(window => window.EndTime > now)
+                .OrderBy(window => window.StartTime > now)
+                .ThenBy(window => window.StartTime)
+                .ThenBy(window => window.MaintenanceWindowId)
+                .Take(5)
+                .AsSplitQuery()
+                .ToListAsync();
+
+            List<AdminMaintenanceRow> maintenanceRows = maintenanceWindows
+                .Select(window => new AdminMaintenanceRow(
+                    window.MaintenanceWindowId,
+                    window.StartTime,
+                    window.EndTime,
+                    window.AffectedRooms.Count == 0
+                        ? "Nincs megadva terem"
+                        : string.Join(", ", window.AffectedRooms
+                            .OrderBy(room => room.RoomName)
+                            .Select(room => $"{room.Building} / {room.Floor} / {room.RoomName}")),
+                    window.StartTime <= now))
+                .ToList();
+
+            // uj allapot
+            AdminRoomCount = buildings.Count;
+            AdminEquipmentCount = equipmentCount;
+            AdminKeyCount = keyCount;
+            AdminRoleCount = roleCount;
+            AdminUserCount = userCount;
+            AdminTotalMaintenanceCount = allMaintenanceCount;
+            AdminActiveMaintenanceCount = activeMaintenanceCount;
+            AdminBuildingRows = buildingRows;
+            AdminMaintenanceRows = maintenanceRows;
+            LastAdminDashboardUpdate = now;
+        }
+        catch (Exception)
+        {
+            AdminDashboardError = "Nem sikerült betölteni az adminisztrátori adatokat. Próbáld újra a frissítést.";
+        }
+        finally
+        {
+            IsAdminDashboardLoading = false;
+        }
+    }
 
     private async Task LoadJanitorDashboardAsync()
     {
@@ -616,13 +864,12 @@
 
         try
         {
-           
+
             DateTime now = DateTime.Now;
             DateTime today = now.Date;
             DateTime tomorrow = today.AddDays(1);
 
-            // A meglévő KeyManagementService kezeli a fizikai kulcsok Out/In állapotát,
-            // Master kulcsok esetében is. A korábbi napok aktív kiadásai is benne vannak.
+            // kulcsok out/in
             List<ActiveKeyIssue> activeIssues = await KeyService.GetActiveIssuesAsync();
 
             await using ApplicationDbContext db = await DbFactory.CreateDbContextAsync();
@@ -716,8 +963,7 @@
                     note));
             }
 
-            // Karbantartás alatt csak az a terem van, amelyet egy MOST aktív
-            // MaintenanceWindow érint. Több ablak ugyanarra a teremre egy figyelmeztetés.
+            // aktiv MaintenanceWindow alatt levo terem
             List<MaintenanceWindow> maintenanceWindows = await db.MaintenanceWindows
                 .AsNoTracking()
                 .Include(window => window.AffectedRooms)
@@ -739,7 +985,6 @@
                 .ThenBy(row => row.RoomName)
                 .ToList();
 
-            // Csak teljes siker esetén írjuk felül a képernyő adatállapotát.
             ActiveKeyRows = keyRows
                 .OrderByDescending(row => row.IsOverdue)
                 .ThenBy(row => row.IssuedAtLocal)

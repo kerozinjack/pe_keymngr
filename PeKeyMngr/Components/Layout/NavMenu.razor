@@ -17,7 +17,7 @@
 
     <nav class="nav flex-column">
 
-        @* KEZDŐLAP - Mindenki számára elérhető *@
+        @* KEZDŐLAP*@
         <div class="nav-item px-3">
             <NavLink class="nav-link"
                      href=""
@@ -32,7 +32,7 @@
 
             <Authorized>
 
-                @* ADMINISZTRÁCIÓ - Admin szerepkör       *@
+                @*Admin szerepkör       *@
 
                 <AuthorizeView Policy="CanAccessAdminPages"
                                Context="adminContext">
@@ -85,6 +85,14 @@
                         </div>
 
                         <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="users">
+                                <span class="bi bi-list-nested-nav-menu"
+                                    aria-hidden="true"></span>
+                                Jogosultságok
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
                             <NavLink class="nav-link" href="roles">
                                 <span class="bi bi-list-nested-nav-menu"
                                       aria-hidden="true"></span>
@@ -95,7 +103,7 @@
                     </Authorized>
                 </AuthorizeView>
 
-                @* OKTATÓI FUNKCIÓK - Teacher szerepkör   *@
+                @* teacher szerepkör   *@
 
                 <AuthorizeView Policy="CanAccessTeacherPages"
                                Context="teacherContext">
@@ -128,7 +136,7 @@
                     </Authorized>
                 </AuthorizeView>
 
-                @* PORTASZOLGÁLAT - Janitor szerepkör     *@
+                @* Janitor szerepkör     *@
 
                 <AuthorizeView Policy="CanAccessJanitorPages"
                                Context="janitorContext">
@@ -151,7 +159,7 @@
                     </Authorized>
                 </AuthorizeView>
 
-                @* ÜZEMELTETÉS - Operations Director     *@
+                @* Operations Director     *@
 
                 <AuthorizeView Policy="CanAccessOperationsDirectorPages"
                                Context="operationsContext">
@@ -175,7 +183,7 @@
                 </AuthorizeView>
 
 
-                @* KÖZÖS FUNKCIÓK - Bejelentkezett userek *@
+                @* KÖZÖS FUNKCIÓK *@
 
                 <div class="nav-item px-3">
                     <span class="nav-link text-uppercase small fw-bold">
