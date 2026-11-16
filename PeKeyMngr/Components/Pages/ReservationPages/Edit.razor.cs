@@ -133,7 +133,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
 
                 ReservationIntervals = await context.Reservations
                     .AsNoTracking()
-                    .Where(reservation => reservation.ReservationId != reservationId)
+                    .Where(reservation => reservation.ReservationId != reservationId && !reservation.IsNoShow)
                     .Select(reservation => new BookingInterval(
                         reservation.Room.RoomId,
                         reservation.StartTime,
@@ -252,6 +252,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
 
                 bool reservationConflict = await context.Reservations.AnyAsync(reservation =>
                     reservation.ReservationId != reservationId &&
+                    !reservation.IsNoShow &&
                     reservation.Room.RoomId == room.RoomId &&
                     reservation.StartTime < end &&
                     reservation.EndTime > start);
