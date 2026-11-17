@@ -33,9 +33,14 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
         private bool IsAuthorized { get; set; }
         private bool CanEditReservation { get; set; }
         private bool IsSaving { get; set; }
+        private bool ShowSuccessModal { get; set; }
         private bool isInitialized;
         private string? UserId { get; set; }
         private string? ErrorMessage { get; set; }
+        private string ReservationSuccessRoom { get; set; } = "";
+        private string ReservationSuccessSchedule { get; set; } = "";
+        private string ReservationSuccessEquipment { get; set; } = "";
+        private Guid UpdatedReservationId { get; set; }
         private Reservation? Reservation { get; set; }
         private List<Room> Rooms { get; set; } = [];
         private List<Equipment> Equipment { get; set; } = [];
@@ -63,6 +68,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
             IsLoading = true;
             IsAuthorized = false;
             CanEditReservation = false;
+            ShowSuccessModal = false;
             UserId = null;
             ErrorMessage = null;
             Reservation = null;
@@ -292,13 +298,24 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                     return;
                 }
 
-                NavigationManager.NavigateTo($"/reservations/details?reservationid={reservationId}");
+                ReservationSuccessRoom = room.RoomName;
+                ReservationSuccessSchedule = $"{start:yyyy.MM.dd. HH:mm} – {end:yyyy.MM.dd. HH:mm}";
+                ReservationSuccessEquipment = requestedEquipment.Count == 0
+                    ? "Nem lett felszerelés igényelve."
+                    : string.Join(", ", requestedEquipment.Select(equipment => equipment.EquipmentName));
+                UpdatedReservationId = reservationId;
+                ShowSuccessModal = true;
             }
             finally
             {
                 IsSaving = false;
             }
         }
+
+        private void NavigateToReservations() => NavigationManager.NavigateTo("/reservations");
+
+        private void NavigateToDetails() =>
+            NavigationManager.NavigateTo($"/reservations/details?reservationid={UpdatedReservationId}");
 
         private void ClearErrorMessage() => ErrorMessage = null;
     }
