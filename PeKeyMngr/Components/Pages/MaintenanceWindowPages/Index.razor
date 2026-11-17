@@ -33,8 +33,8 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <QuickGrid Class="table table-hover align-middle mb-0" Items="context.MaintenanceWindows">
-                    <PropertyColumn Property="maintenancewindow => maintenancewindow.StartTime" Title="Kezdés" />
-                    <PropertyColumn Property="maintenancewindow => maintenancewindow.EndTime" Title="Befejezés" />
+                    <PropertyColumn Property="maintenancewindow => maintenancewindow.StartTime" Title="Kezdés" Format="yyyy.MM.dd. HH:mm" />
+                    <PropertyColumn Property="maintenancewindow => maintenancewindow.EndTime" Title="Befejezés" Format="yyyy.MM.dd. HH:mm" />
                     <PropertyColumn Property="maintenanceWindow => GetAffectedRooms(maintenanceWindow.MaintenanceWindowId)" Title="Érintett termek" />
 
                     <TemplateColumn Context="maintenancewindow" Title="Műveletek">

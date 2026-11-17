@@ -151,7 +151,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 }
 
                 return TryGetSchedule(out DateTime start, out DateTime end)
-                    ? $"{start:g} – {end:t}"
+                    ? $"{start:yyyy.MM.dd. HH:mm} – {end:yyyy.MM.dd. HH:mm}"
                     : "Adjon meg érvényes kezdést és 45 perces lépésekben megadható időtartamot.";
             }
         }
