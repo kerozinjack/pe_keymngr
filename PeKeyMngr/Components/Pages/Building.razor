@@ -1,459 +1,225 @@
-﻿@page "/building"
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@page "/building"
+@using System.Data.Common
+@using Microsoft.EntityFrameworkCore
+@using PeKeyMngr.Data
+@using PeKeyMngr.Models
 @rendermode InteractiveServer
-@inject NavigationManager Navigation
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ILogger<Building> Logger
 
 <PageTitle>Épület áttekintése</PageTitle>
 
 <div class="building-page">
-
     <header class="page-header">
         <h1>Épület áttekintése</h1>
         <p>Válasszon ki egy emeletet a helyiségek megtekintéséhez.</p>
+        <button type="button" class="btn btn-outline-secondary" disabled="@IsLoading" @onclick="LoadRoomsAsync">
+            Állapot frissítése
+        </button>
+        @if (LastUpdated is not null)
+        {
+            <span class="text-muted ms-2">Állapot időpontja: @LastUpdated.Value.ToString("yyyy.MM.dd. HH:mm")</span>
+        }
     </header>
 
-    <div class="building-content">
-        <section class="building-section">
-            <h3>Épület</h3>
-
-            <div class="building-visual">
-                <div class="building-top"></div>
-                <div class="building-floors">
-
-                    @foreach (var floor in Floors.AsEnumerable().Reverse())
-                    {
-                        <button type="button"
-                                class="floor-button @(SelectedFloor == floor ? "selected" : "")"
-                                @onclick="() => SelectFloor(floor)">
-
-                            <span>@floor.Name</span>
-                            <span class="floor-action">Megtekintés →</span>
-
-                        </button>
-                    }
-
-                </div>
-
-                <div class="building-side"></div>
-            </div>
-        </section>
-
-        <section class="floor-section">
-
-            @if (SelectedFloor is not null)
-            {
-                <div class="floor-header">
-                    <h3>@SelectedFloor.Name</h3>
-                    <p>Az emelet helyiségei</p>
-                </div>
-
-                <div class="room-grid">
-
-                    @foreach (var room in SelectedFloor.Rooms)
-                    {
-                        @if (room.Status == "Available")
+    @if (IsLoading)
+    {
+        <div class="alert alert-info" role="status">A termek betöltése folyamatban...</div>
+    }
+    else if (ErrorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+    }
+    else if (Floors.Count == 0)
+    {
+        <div class="alert alert-info">Az I épületben nincs megjeleníthető terem.</div>
+    }
+    else
+    {
+        <div class="building-content">
+            <section class="building-section">
+                <h3>I épület</h3>
+                <div class="building-visual">
+                    <div class="building-top"></div>
+                    <div class="building-floors">
+                        @foreach (FloorInfo floor in Floors.AsEnumerable().Reverse())
                         {
-                            <!-- SZABAD TEREM: KATTINTHATÓ -->
                             <button type="button"
-                                    class="room-box available"
-                                    @onclick="() => OpenRoom(room)">
-
-                                <span class="room-id">@room.FullName</span>
-
-                                <span class="room-status">
-                                    Szabad
-                                </span>
-
-                                <span>@room.Name</span>
-                                <span>@room.Capacity fő</span>
-
-                                <span>
-                                    @string.Join(", ", room.Equipment)
-                                </span>
-
+                                    class="floor-button @(SelectedFloor == floor ? "selected" : "")"
+                                    @onclick="() => SelectFloor(floor)">
+                                <span>@floor.Floor</span>
+                                <span class="floor-action">Megtekintés →</span>
                             </button>
                         }
-                        else if (room.Status == "Reserved")
-                        {
-                            <!-- FOGLALT TEREM: NEM KATTINTHATÓ -->
-                            <div class="room-box reserved">
-
-                                <span class="room-id">@room.FullName</span>
-
-                                <span class="room-status">
-                                    Foglalt
-                                </span>
-
-                                <span>
-                                    Foglalt: @room.ReservedBy által,
-                                    @room.ReservedUntil-ig
-                                </span>
-
-                            </div>
-                        }
-                        else if (room.Status == "Maintenance")
-                        {
-                            <!-- KARBANTARTÁS: NEM KATTINTHATÓ -->
-                            <div class="room-box maintenance">
-
-                                <span class="room-id">@room.FullName</span>
-
-                                <span class="room-status">
-                                    Karbantartás
-                                </span>
-
-                                <span>
-                                    Karbantartás alatt van.
-                                </span>
-
-                            </div>
-                        }
-                    }
-
+                    </div>
+                    <div class="building-side"></div>
                 </div>
-            }
-            else
-            {
-                <div class="empty-selection">
-                    Válasszon ki egy szintet az épületből!
-                </div>
-            }
+            </section>
 
-        </section>
+            <section class="floor-section">
+                @if (SelectedFloor is not null)
+                {
+                    <div class="floor-header">
+                        <h3>@SelectedFloor.Floor</h3>
+                        <p>Az emelet helyiségei</p>
+                    </div>
 
-    </div>
-    <div class="status-legend">
-        <span><i class="status-dot available"></i> Szabad</span>
-        <span><i class="status-dot reserved"></i> Foglalt</span>
-        <span><i class="status-dot maintenance"></i> Karbantartás</span>
-    </div>
+                    <div class="room-grid">
+                        @foreach (RoomInfo room in SelectedFloor.Rooms)
+                        {
+                            @if (room.Status == RoomStatus.Available)
+                            {
+                                <div class="room-box available">
+                                    <span class="room-id">@room.RoomName</span>
+                                    <span class="room-status">Szabad</span>
+                                    <span>@room.Capacity fő</span>
+                                    <span>@string.Join(", ", room.Equipment)</span>
+                                </div>
+                            }
+                            else if (room.Status == RoomStatus.Reserved)
+                            {
+                                <div class="room-box reserved">
+                                    <span class="room-id">@room.RoomName</span>
+                                    <span class="room-status">Foglalt</span>
+                                    <span>Foglalt: @(room.ReservedUntil?.ToString("yyyy.MM.dd. HH:mm"))-ig</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="room-box maintenance">
+                                    <span class="room-id">@room.RoomName</span>
+                                    <span class="room-status">Karbantartás</span>
+                                    <span>Karbantartás alatt van.</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-selection">Válasszon ki egy szintet az épületből!</div>
+                }
+            </section>
+        </div>
 
+        <div class="status-legend">
+            <span><i class="status-dot available"></i> Szabad</span>
+            <span><i class="status-dot reserved"></i> Foglalt</span>
+            <span><i class="status-dot maintenance"></i> Karbantartás</span>
+        </div>
+    }
 </div>
 
 @code {
-    private List<FloorInfo> Floors = new();
+    private List<FloorInfo> Floors = [];
+    private FloorInfo? SelectedFloor;
+    private bool IsLoading;
+    private string? ErrorMessage;
+    private DateTime? LastUpdated;
 
-    private FloorInfo? SelectedFloor = null;
+    protected override Task OnInitializedAsync() => LoadRoomsAsync();
 
-    protected override async Task OnInitializedAsync()
+    private async Task LoadRoomsAsync()
     {
-
-        if (!Floors.Any())
+        if (IsLoading)
         {
-            LoadMockData(); // Ideiglenes tesztadatok betöltése
+            return;
         }
 
-        await Task.CompletedTask;
-    }
-
-    // Kiválasztott szint beállítása.
-    private void SelectFloor(FloorInfo floor)
-    {
-        SelectedFloor = floor;
-    }
-
-    // Szabad terem esetén átirányítás a foglalási oldalra.
-    private void OpenRoom(RoomInfo room)
-    {
-        if (room.Status != "Available")
-            return;
-
-        Navigation.NavigateTo(
-            $"/foglalas?room={Uri.EscapeDataString(room.FullName)}"
-        );
-    }
-
-    // IDEIGLENES TESZTADATOK BETÖLTÉSE (Az adatbázis bekötéséig)
-    private void LoadMockData()
-    {
-        Floors = new List<FloorInfo>
+        IsLoading = true;
+        ErrorMessage = null;
+        try
         {
-            new FloorInfo
-            {
-                Name = "Földszint",
-                DisplayName = "FSZ",
-                Rooms = new List<RoomInfo>
+            DateTime now = DateTime.Now;
+            await using ApplicationDbContext context = await DbFactory.CreateDbContextAsync();
+            List<Room> rooms = await context.Rooms
+                .AsNoTracking()
+                .Include(room => room.Equipments)
+                .Where(room => room.Building == "I")
+                .OrderBy(room => room.Floor)
+                .ThenBy(room => room.RoomName)
+                .ToListAsync();
+
+            var reservations = await context.Reservations
+                .AsNoTracking()
+                .Where(reservation =>
+                    reservation.Room.Building == "I" &&
+                    reservation.StartTime <= now &&
+                    reservation.EndTime > now)
+                .Select(reservation => new
                 {
-                    new RoomInfo
-                    {
-                        Name = "Nagyelőadó I1",
-                        RoomName = "I1",
-                        FullName = "I.FSZ.I1",
-                        Capacity = 80,
-                        Status = "Available",
-                        Equipment = new() { "Projektor", "Interaktív tábla", "Hangrendszer", "Katedra PC" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Főelőadó I2",
-                        RoomName = "I2",
-                        FullName = "I.FSZ.I2",
-                        Capacity = 75,
-                        Status = "Reserved",
-                        ReservedBy = "Dr. Kovács Antal",
-                        ReservedUntil = "14:00",
-                        Equipment = new() { "Projektor", "Interaktív tábla", "Mikrofon szett" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Hallgatói PC Labor PC0",
-                        RoomName = "PC0",
-                        FullName = "I.FSZ.PC0",
-                        Capacity = 28,
-                        Status = "Available",
-                        Equipment = new() { "28x PC", "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Tanulózóna PC1",
-                        RoomName = "PC1",
-                        FullName = "I.FSZ.PC1",
-                        Capacity = 22,
-                        Status = "Maintenance",
-                        Equipment = new() { "22x PC", "Projektor", "Interaktív tábla" }
-                    }
-                }
-            },
+                    reservation.Room.RoomId,
+                    reservation.EndTime
+                })
+                .ToListAsync();
 
-            new FloorInfo
-            {
-                Name = "1. emelet",
-                DisplayName = "1",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
-                    {
-                        Name = "VIRT Előadó 101",
-                        RoomName = "101",
-                        FullName = "I.1.101",
-                        Capacity = 45,
-                        Status = "Available",
-                        Equipment = new() { "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Méréselmélet Terem 102",
-                        RoomName = "102",
-                        FullName = "I.1.102",
-                        Capacity = 35,
-                        Status = "Reserved",
-                        ReservedBy = "Nagy Beatrix",
-                        ReservedUntil = "12:30",
-                        Equipment = new() { "Projektor", "Interaktív tábla" }
-                    }
-                }
-            },
+            List<MaintenanceWindow> maintenanceWindows = await context.MaintenanceWindows
+                .AsNoTracking()
+                .Include(window => window.AffectedRooms)
+                .Where(window =>
+                    window.StartTime <= now &&
+                    window.EndTime > now &&
+                    window.AffectedRooms.Any(room => room.Building == "I"))
+                .ToListAsync();
+            HashSet<Guid> maintenanceRoomIds = maintenanceWindows
+                .SelectMany(window => window.AffectedRooms.Select(room => room.RoomId))
+                .ToHashSet();
+            Dictionary<Guid, DateTime> reservedRooms = reservations
+                .GroupBy(reservation => reservation.RoomId)
+                .ToDictionary(group => group.Key, group => group.Max(reservation => reservation.EndTime));
 
-            new FloorInfo
-            {
-                Name = "2. emelet",
-                DisplayName = "2",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
+            List<FloorInfo> floors = rooms
+                .GroupBy(room => room.Floor)
+                .Select(group => new FloorInfo(
+                    group.Key,
+                    group.Select(room =>
                     {
-                        Name = "VIRT PC Labor 201",
-                        RoomName = "201",
-                        FullName = "I.2.201",
-                        Capacity = 25,
-                        Status = "Available",
-                        Equipment = new() { "25x PC", "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Mikrovezérlők Labor 202",
-                        RoomName = "202",
-                        FullName = "I.2.202",
-                        Capacity = 20,
-                        Status = "Maintenance",
-                        Equipment = new() { "20x PC", "Projektor", "Interaktív tábla", "Mérőműszerek" }
-                    }
-                }
-            },
+                        bool isReserved = reservedRooms.TryGetValue(room.RoomId, out DateTime reservedUntil);
+                        RoomStatus status = maintenanceRoomIds.Contains(room.RoomId)
+                            ? RoomStatus.Maintenance
+                            : isReserved ? RoomStatus.Reserved : RoomStatus.Available;
+                        return new RoomInfo(
+                            room.RoomName,
+                            room.Capacity,
+                            room.Equipments.Select(equipment => equipment.EquipmentName).ToList(),
+                            status,
+                            isReserved ? reservedUntil : null);
+                    }).ToList()))
+                .ToList();
 
-            new FloorInfo
-            {
-                Name = "3. emelet",
-                DisplayName = "3",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
-                    {
-                        Name = "Matematika PC Labor 301",
-                        RoomName = "301",
-                        FullName = "I.3.301",
-                        Capacity = 16,
-                        Status = "Available",
-                        Equipment = new() { "16x PC", "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Valószínűségszámítás Labor 302",
-                        RoomName = "302",
-                        FullName = "I.3.302",
-                        Capacity = 18,
-                        Status = "Reserved",
-                        ReservedBy = "Szabó Péter",
-                        ReservedUntil = "16:15",
-                        Equipment = new() { "18x PC", "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Numerikus Módszerek Labor 303",
-                        RoomName = "303",
-                        FullName = "I.3.303",
-                        Capacity = 15,
-                        Status = "Available",
-                        Equipment = new() { "15x PC", "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Kutatói Konzultációs PC 304",
-                        RoomName = "304",
-                        FullName = "I.3.304",
-                        Capacity = 20,
-                        Status = "Maintenance",
-                        Equipment = new() { "20x PC", "Projektor", "Interaktív tábla" }
-                    }
-                }
-            },
-
-            new FloorInfo
-            {
-                Name = "4. emelet",
-                DisplayName = "4",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
-                    {
-                        Name = "Embedded Systems Labor 401",
-                        RoomName = "401",
-                        FullName = "I.4.401",
-                        Capacity = 24,
-                        Status = "Available",
-                        Equipment = new() { "24x PC", "Projektor", "Interaktív tábla", "Forrasztóállomások" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Robotika Szakkör Labor 417",
-                        RoomName = "417",
-                        FullName = "I.4.417",
-                        Capacity = 20,
-                        Status = "Reserved",
-                        ReservedBy = "Dr. Molnár Zoltán",
-                        ReservedUntil = "18:00",
-                        Equipment = new() { "20x PC", "Projektor", "Interaktív tábla", "3D Nyomtatók", "TestBench" }
-                    }
-                }
-            },
-
-            new FloorInfo
-            {
-                Name = "5. emelet",
-                DisplayName = "5",
-                Rooms = new List<RoomInfo>()
-            },
-
-            new FloorInfo
-            {
-                Name = "6. emelet",
-                DisplayName = "6",
-                Rooms = new List<RoomInfo>()
-            },
-
-            new FloorInfo
-            {
-                Name = "7. emelet",
-                DisplayName = "7",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
-                    {
-                        Name = "Dékáni Titkárság Tárgyaló 701",
-                        RoomName = "701",
-                        FullName = "I.7.701",
-                        Capacity = 25,
-                        Status = "Available",
-                        Equipment = new() { "Projektor", "Interaktív tábla", "Konferenciagép" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Tanácsterem 726",
-                        RoomName = "726",
-                        FullName = "I.7.726",
-                        Capacity = 30,
-                        Status = "Reserved",
-                        ReservedBy = "Dékáni Hivatal",
-                        ReservedUntil = "15:00",
-                        Equipment = new() { "Projektor", "Interaktív tábla", "Ozsonna pult" }
-                    }
-                }
-            },
-
-            new FloorInfo
-            {
-                Name = "8. emelet",
-                DisplayName = "8",
-                Rooms = new List<RoomInfo>()
-            },
-
-            new FloorInfo
-            {
-                Name = "9. emelet",
-                DisplayName = "9",
-                Rooms = new List<RoomInfo>
-                {
-                    new RoomInfo
-                    {
-                        Name = "RSZT Szemináriumi Terem 901",
-                        RoomName = "901",
-                        FullName = "I.9.901",
-                        Capacity = 28,
-                        Status = "Available",
-                        Equipment = new() { "Projektor", "Interaktív tábla" }
-                    },
-                    new RoomInfo
-                    {
-                        Name = "Algoritmusok Labor 917",
-                        RoomName = "917",
-                        FullName = "I.9.917",
-                        Capacity = 22,
-                        Status = "Maintenance",
-                        Equipment = new() { "Projektor", "Interaktív tábla", "Szerver gép" }
-                    }
-                }
-            },
-
-            new FloorInfo
-            {
-                Name = "10. emelet (Raktár)",
-                DisplayName = "10",
-                Rooms = new List<RoomInfo>()
-            }
-        };
+            SelectedFloor = SelectedFloor is FloorInfo selectedFloor
+                ? floors.FirstOrDefault(floor =>
+                    floor.Floor == selectedFloor.Floor)
+                : null;
+            Floors = floors;
+            LastUpdated = now;
+        }
+        catch (DbException exception)
+        {
+            Logger.LogError(exception, "Failed to load building room availability");
+            ErrorMessage = "Nem sikerült betölteni a termek állapotát. Próbálja újra a frissítést.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    /*
-     * Ezek az osztályok csak ideiglenes segédmodellek.
-     */
-    private class FloorInfo
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string DisplayName { get; set; } = "";
-        public List<RoomInfo> Rooms { get; set; } = new();
-    }
+    private void SelectFloor(FloorInfo floor) => SelectedFloor = floor;
 
-    private class RoomInfo
+    private sealed record FloorInfo(string Floor, List<RoomInfo> Rooms);
+
+    private sealed record RoomInfo(
+        string RoomName,
+        int Capacity,
+        List<string> Equipment,
+        RoomStatus Status,
+        DateTime? ReservedUntil);
+
+    private enum RoomStatus
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string RoomName { get; set; } = "";
-        public string FullName { get; set; } = "";
-        public int Capacity { get; set; }
-        public string Status { get; set; } = "";
-        public List<string> Equipment { get; set; } = new();
-        public string? ReservedBy { get; set; }
-        public string? ReservedUntil { get; set; }
+        Available,
+        Reserved,
+        Maintenance
     }
 }
