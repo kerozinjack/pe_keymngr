@@ -1,5 +1,6 @@
 @page "/reservations/booking"
 @using Microsoft.AspNetCore.Authorization
+@using PeKeyMngr.Components.Shared
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "CanAccessTeacherPages")]
 
@@ -45,9 +46,18 @@
     }
 </div>
 
-<ReservationSuccessModal IsOpen="ShowSuccessModal"
-                         RoomName="@ReservationSuccessRoom"
-                         Schedule="@ReservationSuccessSchedule"
-                         Equipment="@ReservationSuccessEquipment"
-                         OnClose="CloseSuccessModal"
-                         OnViewReservations="NavigateToReservations" />
+<SuccessModal IsOpen="ShowSuccessModal"
+              Title="Sikeres foglalás"
+              Description="A foglalás rögzítése megtörtént."
+              PrimaryButtonText="Foglalásaim"
+              OnSecondaryAction="CloseSuccessModal"
+              OnPrimaryAction="NavigateToReservations">
+    <dl class="success-modal-details">
+        <dt>Terem</dt>
+        <dd>@ReservationSuccessRoom</dd>
+        <dt>Időpont</dt>
+        <dd>@ReservationSuccessSchedule</dd>
+        <dt>Igényelt felszerelés</dt>
+        <dd>@ReservationSuccessEquipment</dd>
+    </dl>
+</SuccessModal>

@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using PeKeyMngr.Authorization;
 using PeKeyMngr.Components;
 using PeKeyMngr.Components.Account;
 using PeKeyMngr.Data;
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("hu-HU");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("hu-HU");
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 
@@ -74,19 +78,20 @@ builder.Services.AddScoped<IAuthorizationHandler, CanAccessOperationsDirectorPag
 
 builder.Services.AddControllers();
 
-// HTTP-kÈrÈs adatainak wlÈrÈse.
+// HTTP-k√©r√©s adatainak wl√©r√©se.
 builder.Services.AddHttpContextAccessor();
 
-// AuditnaplÛz·shoz sz¸ksÈges szolg·ltat·sok.
+// Auditnapl√≥z√°shoz sz√ºks√©ges szolg√°ltat√°sok.
 builder.Services.AddScoped<AuditActorProvider>();
 builder.Services.AddScoped<AuditLogWriter>();
 
-// Port·s kulcskezelÈsi szolg·ltat·sa.
-//builder.Services.AddScoped<JanitorTestClock>(); // EngedÈlyezd ha tesztelni akarod a port·s dashboardon a holnapi foglal·sok list·z·sa funkciÛt
+// Port√°s kulcskezel√©si szolg√°ltat√°sa.
+//builder.Services.AddScoped<JanitorTestClock>(); // Enged√©lyezd ha tesztelni akarod a port√°s dashboardon a holnapi foglal√°sok list√°z√°sa funkci√≥t
 builder.Services.AddScoped<KeyManagementService>();
 
 // Admin user/role management.
 builder.Services.AddScoped<AdminUserRoleService>();
+builder.Services.AddHostedService<NoShowMonitorService>();
 
 WebApplication? app = builder.Build();
 // Apply database migrations

@@ -1,6 +1,7 @@
 @page "/"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
+@using System.Data.Common
 @using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PeKeyMngr.Data
@@ -9,6 +10,7 @@
 @inject NavigationManager Nav
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject KeyManagementService KeyService
+@inject ILogger<Home> Logger
 
 <PageTitle>Kezdőlap – Terem- és kulcskezelő rendszer</PageTitle>
 
@@ -69,6 +71,51 @@
                 <!-- OKTATÓ -->
                 @if (SelectedRole == "Oktató / Igénylő")
                 {
+                    <!-- A BEJELENTKEZETT OKTATÓ MAI FOGLALÁSAI -->
+                    <div class="col-12">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-body border-bottom py-3 px-4">
+                                <h5 class="fw-bold mb-0">Mai foglalásaim</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (TeacherScheduleError is not null)
+                                {
+                                    <div class="alert alert-danger m-3" role="alert">@TeacherScheduleError</div>
+                                }
+                                else if (TodayTeacherReservations.Count == 0)
+                                {
+                                    <div class="text-muted py-4 px-4">Ma nincs foglalása.</div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="ps-4" scope="col">Terem</th>
+                                                    <th scope="col">Épület</th>
+                                                    <th scope="col">Kezdés</th>
+                                                    <th scope="col">Befejezés</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (TeacherReservationRow reservation in TodayTeacherReservations)
+                                                {
+                                                    <tr @key="reservation.ReservationId">
+                                                        <td class="ps-4">@reservation.RoomName</td>
+                                                        <td>@reservation.Building</td>
+                                                        <td>@reservation.StartTime.ToString("yyyy.MM.dd. HH:mm")</td>
+                                                        <td>@reservation.EndTime.ToString("yyyy.MM.dd. HH:mm")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-12 col-md-6 col-xl-4">
                         <div class="card h-100 shadow-sm border-0">
                             <div class="card-body p-4">
@@ -80,9 +127,9 @@
                                     <a href="/reservations" class="btn btn-outline-primary">
                                         Foglalások megtekintése
                                     </a>
-                                    <span class="text-muted small text-center">
-                                        Új foglalás – fejlesztés alatt
-                                    </span>
+                                    <a href="/reservations/booking" class="btn btn-outline-primary">
+                                        Új foglalás
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -670,6 +717,18 @@
     private string? SelectedRole { get; set; }
 
     // portás kezdőlap
+    // Csak az oktató kezdőlapjára vonatkozó, megjelenítési adatok.
+    private sealed record TeacherReservationRow(
+        Guid ReservationId,
+        string RoomName,
+        string Building,
+        DateTime StartTime,
+        DateTime EndTime);
+
+    private List<TeacherReservationRow> TodayTeacherReservations { get; set; } = [];
+    private string? TeacherScheduleError { get; set; }
+
+    // Csak a portás kezdőlapjára vonatkozó, megjelenítési adatok.
     private sealed record DashboardKeyRow(
         Guid KeyId,
         string KeyName,
@@ -749,6 +808,36 @@
                     : roles.Contains("janitor") ? "Portás / Operátor"
                     : roles.Contains("Operations Director") ? "Üzemeltetési igazgató"
                     : null;
+
+                // Csak a bejelentkezett oktató mai napon kezdődő foglalásait töltjük be.
+                if (ActualRole == "Oktató / Igénylő")
+                {
+                    try
+                    {
+                        DateTime today = DateTime.Today;
+                        DateTime tomorrow = today.AddDays(1);
+                        TodayTeacherReservations = await db.Reservations
+                            .AsNoTracking()
+                            .Where(reservation =>
+                                reservation.RequestedBy.Id == userId &&
+                                reservation.StartTime >= today &&
+                                reservation.StartTime < tomorrow)
+                            .OrderBy(reservation => reservation.StartTime)
+                            .Select(reservation => new TeacherReservationRow(
+                                reservation.ReservationId,
+                                reservation.Room.RoomName,
+                                reservation.Room.Building,
+                                reservation.StartTime,
+                                reservation.EndTime))
+                            .ToListAsync();
+                    }
+                    catch (DbException exception)
+                    {
+                        // Adatbázishiba esetén nem jelenítünk meg üres foglalási listát.
+                        Logger.LogError(exception, "Failed to load today's reservations for user {UserId}", userId);
+                        TeacherScheduleError = "Nem sikerült betölteni a mai foglalásokat. Frissítse az oldalt.";
+                    }
+                }
             }
         }
 

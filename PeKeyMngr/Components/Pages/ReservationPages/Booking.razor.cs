@@ -141,6 +141,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
 
             var reservationRanges = await context.Reservations
                 .AsNoTracking()
+                .Where(reservation => !reservation.IsNoShow)
                 .Select(reservation => new
                 {
                     RoomId = reservation.Room.RoomId,
@@ -246,6 +247,7 @@ namespace PeKeyMngr.Components.Pages.ReservationPages
                 await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
             bool reservationConflict = await context.Reservations.AnyAsync(reservation =>
+                !reservation.IsNoShow &&
                 reservation.Room.RoomId == roomId &&
                 reservation.StartTime < end &&
                 reservation.EndTime > start);

@@ -11,6 +11,7 @@ namespace PeKeyMngr.Models
         public required ApplicationUser RequestedBy { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
+        public bool IsNoShow { get; set; }
         public List<Equipment> Equipments { get; set; } = [];
     }
 }
