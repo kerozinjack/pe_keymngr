@@ -342,6 +342,7 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("EquipmentName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.HasKey("EquipmentId");
@@ -361,6 +362,7 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("IssueDescription")
                         .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ReportedById")
@@ -386,6 +388,7 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("KeyName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.HasKey("KeyId");
@@ -452,6 +455,9 @@ namespace PeKeyMngr.Migrations
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsNoShow")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("RequestedById")
                         .HasColumnType("TEXT");
 
@@ -482,6 +488,7 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("RoleName")
                         .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.HasKey("RoleId");
@@ -499,6 +506,7 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("Building")
                         .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Capacity")
@@ -506,10 +514,12 @@ namespace PeKeyMngr.Migrations
 
                     b.Property<string>("Floor")
                         .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RoomName")
                         .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.HasKey("RoomId");
