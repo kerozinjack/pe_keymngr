@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using PeKeyMngr.Authorization;
 using PeKeyMngr.Components;
 using PeKeyMngr.Components.Account;
 using PeKeyMngr.Data;
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("hu-HU");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("hu-HU");
 
 WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +88,8 @@ builder.Services.AddScoped<AuditLogWriter>();
 // Portás kulcskezelési szolgáltatása.
 //builder.Services.AddScoped<JanitorTestClock>(); // Engedélyezd ha tesztelni akarod a portás dashboardon a holnapi foglalások listázása funkciót
 builder.Services.AddScoped<KeyManagementService>();
+
+builder.Services.AddHostedService<NoShowMonitorService>();
 
 WebApplication? app = builder.Build();
 // Apply database migrations

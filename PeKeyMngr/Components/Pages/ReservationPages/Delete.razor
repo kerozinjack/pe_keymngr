@@ -27,11 +27,11 @@
     else {
         <dl class="row">
             <dt class="col-sm-2">Kezdés időpontja</dt>
-            <dd class="col-sm-10">@reservation.StartTime</dd>
+            <dd class="col-sm-10">@reservation.StartTime.ToString("yyyy.MM.dd. HH:mm")</dd>
         </dl>
         <dl class="row">
             <dt class="col-sm-2">Befejezés időpontja</dt>
-            <dd class="col-sm-10">@reservation.EndTime</dd>
+            <dd class="col-sm-10">@reservation.EndTime.ToString("yyyy.MM.dd. HH:mm")</dd>
         </dl>
         <EditForm method="post" Model="reservation" OnValidSubmit="DeleteReservation" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(reservation is null)">Törlés</button> |

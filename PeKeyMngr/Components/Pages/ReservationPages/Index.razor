@@ -37,10 +37,17 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <QuickGrid Class="table table-hover align-middle mb-0" Items="reservations">
-                    <PropertyColumn Property="reservation => reservation.StartTime" Title="Kezdés" />
-                    <PropertyColumn Property="reservation => reservation.EndTime" Title="Befejezés" />
+                    <PropertyColumn Property="reservation => reservation.StartTime" Title="Kezdés" Format="yyyy.MM.dd. HH:mm" />
+                    <PropertyColumn Property="reservation => reservation.EndTime" Title="Befejezés" Format="yyyy.MM.dd. HH:mm" />
                     <PropertyColumn Property="reservation => reservation.Room.RoomName" Title="Terem" />
                     <PropertyColumn Property="reservation => GetEquipments(reservation.ReservationId)" Title="Igényelt eszközök" />
+
+                    <TemplateColumn Context="reservation" Title="Állapot">
+                        @if (reservation.IsNoShow)
+                        {
+                            <span class="badge bg-danger">Nem jelent meg</span>
+                        }
+                    </TemplateColumn>
 
                     <TemplateColumn Context="reservation" Title="Műveletek">
                         <div class="d-flex flex-wrap gap-2">

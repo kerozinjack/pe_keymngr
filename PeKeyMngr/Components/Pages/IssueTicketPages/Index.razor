@@ -36,9 +36,11 @@
                            Class="table table-hover align-middle mb-0"
                            Items="context.IssueTickets.Include(ticket => ticket.ReportedBy).Include(ticket => ticket.AffectedRoom)">
 
-                    <PropertyColumn Property="issueticket => issueticket.Timestamp" Title="Bejelentés időpontja" />
+                    <PropertyColumn Property="issueticket => issueticket.Timestamp" Title="Bejelentés időpontja" Format="yyyy.MM.dd. HH:mm" />
                     <PropertyColumn Property="issueticket => issueticket.AffectedRoom.RoomName" Title="Érintett terem" />
-                    <PropertyColumn Property="issueticket => issueticket.IssueDescription" Title="Hiba leírása" />
+                    <TemplateColumn Context="issueticket" Title="Hiba leírása">
+                        @ShortenDescription(issueticket.IssueDescription)
+                    </TemplateColumn>
                     <PropertyColumn Property="issueticket => issueticket.ReportedBy.UserName" Title="Bejelentő" />
 
                     <TemplateColumn Context="issueticket" Title="Műveletek">
@@ -68,6 +70,16 @@
 
 @code {
     private ApplicationDbContext context = default!;
+
+    private static string ShortenDescription(string description)
+    {
+        if (description.Length <= 35)
+        {
+            return description;
+        }
+
+        return description.Substring(0, 35) + "...";
+    }
 
     protected override void OnInitialized()
     {
