@@ -143,6 +143,7 @@
             var reservations = await context.Reservations
                 .AsNoTracking()
                 .Where(reservation =>
+                    !reservation.IsNoShow &&
                     reservation.Room.Building == "I" &&
                     reservation.StartTime <= now &&
                     reservation.EndTime > now)
