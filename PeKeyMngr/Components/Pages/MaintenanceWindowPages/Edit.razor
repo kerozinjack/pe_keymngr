@@ -1,6 +1,8 @@
 @page "/maintenancewindows/edit"
 @using Microsoft.AspNetCore.Authorization
+@using System.Data
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.EntityFrameworkCore.Storage
 @using PeKeyMngr.Models
 @inject IDbContextFactory<PeKeyMngr.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
@@ -38,7 +40,7 @@
                         <h5 class="mb-0">Karbantartási adatok</h5>
                     </div>
 
-                    <EditForm method="post" Model="MaintenanceWindow" OnValidSubmit="UpdateMaintenanceWindow" FormName="edit" Enhance>
+                    <EditForm method="post" EditContext="editContext" OnSubmit="SubmitWithoutConfirmation" FormName="edit" Enhance>
                         <DataAnnotationsValidator />
 
                         <input type="hidden" name="MaintenanceWindow.MaintenanceWindowId" value="@MaintenanceWindow.MaintenanceWindowId" />
@@ -49,16 +51,22 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="starttime" class="form-label">Kezdés dátuma</label>
-                                    <InputDate id="starttime"
+                                    <InputDate Type="InputDateType.DateTimeLocal"
+                                               id="starttime"
                                                @bind-Value="MaintenanceWindow.StartTime"
+                                               @bind-Value:after="ResetConflicts"
+                                               disabled="@isSaving"
                                                class="form-control" />
                                     <ValidationMessage For="() => MaintenanceWindow.StartTime" class="text-danger" />
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <label for="endtime" class="form-label">Befejezés dátuma</label>
-                                    <InputDate id="endtime"
+                                    <InputDate Type="InputDateType.DateTimeLocal"
+                                               id="endtime"
                                                @bind-Value="MaintenanceWindow.EndTime"
+                                               @bind-Value:after="ResetConflicts"
+                                               disabled="@isSaving"
                                                class="form-control" />
                                     <ValidationMessage For="() => MaintenanceWindow.EndTime" class="text-danger" />
                                 </div>
@@ -73,13 +81,14 @@
                                 </p>
 
                                 <div class="row g-2">
-                                    @foreach (KeyValuePair<Guid, string> kvp in GetRooms())
+                                    @foreach (KeyValuePair<Guid, string> kvp in rooms)
                                     {
                                         <div class="col-12 col-sm-6 col-md-4">
                                             <div class="form-check border rounded p-3 h-100">
                                                 <input type="checkbox"
                                                        class="form-check-input"
                                                        id="@kvp.Key"
+                                                       disabled="@isSaving"
                                                        @onchange="args => ToggleRoom(kvp.Key, args)"
                                                        checked="@IsAffectedRoom(kvp.Key)" />
                                                 <label class="form-check-label ms-2" for="@kvp.Key">
@@ -89,6 +98,9 @@
                                         </div>
                                     }
                                 </div>
+                                <ValidationMessage For="() => MaintenanceWindow.AffectedRooms" class="text-danger" />
+                                <ReservationConflictWarning Conflicts="conflicts" IsSaving="isSaving"
+                                                            OnConfirm="SubmitWithConfirmation" OnAdjust="ResetConflicts" />
                             </div>
                         </div>
 
@@ -98,7 +110,7 @@
                                 Vissza a listához
                             </a>
 
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" disabled="@(isSaving || conflicts.Count > 0)">
                                 <i class="bi bi-check-lg me-2"></i>
                                 Módosítások mentése
                             </button>
@@ -117,18 +129,12 @@
     [SupplyParameterFromForm]
     private MaintenanceWindow? MaintenanceWindow { get; set; }
 
-    private List<Room> AffRooms = [];
-
-    private Dictionary<Guid, string> GetRooms()
-    {
-        using var context = DbFactory.CreateDbContext();
-
-        if (MaintenanceWindow is null)
-        {
-            return new();
-        }
-        return context.Rooms.ToDictionary(k => k.RoomId, v => v.RoomName);
-    }
+    private EditContext editContext = default!;
+    private ValidationMessageStore validationMessages = default!;
+    private Dictionary<Guid, string> rooms = [];
+    private List<ReservationConflict> conflicts = [];
+    private bool isSaving;
+    private int conflictVersion;
 
     public bool IsAffectedRoom(Guid roomId)
     {
@@ -136,12 +142,12 @@
         {
             return false;
         }
-        using var context = DbFactory.CreateDbContext();
-        return context.MaintenanceWindows.Include(mw => mw.AffectedRooms).Where(mw => mw.MaintenanceWindowId == MaintenanceWindowId).SelectMany(mw => mw.AffectedRooms).Any(r => r.RoomId == roomId);
+        return MaintenanceWindow.AffectedRooms.Any(room => room.RoomId == roomId);
     }
 
     private void ToggleRoom(Guid roomId, ChangeEventArgs args)
     {
+        ResetConflicts();
         using var context = DbFactory.CreateDbContext();
         Room? r = context.Rooms.FirstOrDefault(room => room.RoomId == roomId);
         if (r == null)
@@ -150,16 +156,28 @@
         }
         if (args.Value is bool and true)
         {
-            if (!AffRooms.Contains(r))
+            if (!MaintenanceWindow!.AffectedRooms.Any(room => room.RoomId == r.RoomId))
             {
-                AffRooms.Add(r);
+                MaintenanceWindow.AffectedRooms.Add(r);
             }
         }
         else
         {
-            AffRooms = AffRooms.FindAll(x => x.RoomId != r.RoomId);
+            MaintenanceWindow!.AffectedRooms.RemoveAll(room => room.RoomId == r.RoomId);
         }
+
+        editContext.NotifyFieldChanged(new FieldIdentifier(
+            MaintenanceWindow!, nameof(MaintenanceWindow.AffectedRooms)));
     }
+
+    private void ResetConflicts()
+    {
+        conflicts = [];
+        conflictVersion++;
+    }
+
+    private Task SubmitWithoutConfirmation() => SubmitMaintenanceWindow(false);
+    private Task SubmitWithConfirmation() => SubmitMaintenanceWindow(true);
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,35 +187,118 @@
         if (MaintenanceWindow is null)
         {
             NavigationManager.NotFound();
+            return;
         }
-        AffRooms = MaintenanceWindow!.AffectedRooms;
+
+        editContext = new EditContext(MaintenanceWindow);
+        validationMessages = new ValidationMessageStore(editContext);
+        rooms = await context.Rooms.ToDictionaryAsync(k => k.RoomId, v => v.RoomName);
     }
 
     // To protect from overposting attacks, enable the specific properties you want to bind to.
     // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
-    private async Task UpdateMaintenanceWindow()
+    private async Task SubmitMaintenanceWindow(bool confirmed)
     {
-        using var context = DbFactory.CreateDbContext();
-        MaintenanceWindow? mw = context.MaintenanceWindows.Include(mw => mw.AffectedRooms).FirstOrDefault(m => m.MaintenanceWindowId == MaintenanceWindowId);
-
-        if (mw is null)
+        if (isSaving)
         {
-            NavigationManager.NotFound();
             return;
         }
 
-        context.Attach(mw).State = EntityState.Modified;
-        mw.AffectedRooms.Clear();
-        foreach (Room room in AffRooms)
+        validationMessages.Clear();
+        bool isValid = editContext.Validate();
+
+        if (MaintenanceWindow!.EndTime <= MaintenanceWindow.StartTime)
         {
-            context.Attach(room).State = EntityState.Unchanged;
-            mw.AffectedRooms.Add(room);
+            validationMessages.Add(
+                new FieldIdentifier(MaintenanceWindow, nameof(MaintenanceWindow.EndTime)),
+                "A befejezés időpontjának a kezdés időpontja után kell lennie.");
         }
 
+        if (MaintenanceWindow.AffectedRooms.Count == 0)
+        {
+            validationMessages.Add(
+                new FieldIdentifier(MaintenanceWindow, nameof(MaintenanceWindow.AffectedRooms)),
+                "Legalább egy érintett termet ki kell választani.");
+        }
 
+        editContext.NotifyValidationStateChanged();
+        if (!isValid || editContext.GetValidationMessages().Any())
+        {
+            return;
+        }
+
+        int submittedVersion = conflictVersion;
+        DateTime start = MaintenanceWindow.StartTime;
+        DateTime end = MaintenanceWindow.EndTime;
+        List<Guid> roomIds = MaintenanceWindow.AffectedRooms.Select(room => room.RoomId).ToList();
+        isSaving = true;
         try
         {
+            using var context = DbFactory.CreateDbContext();
+            await using IDbContextTransaction transaction =
+                await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            List<ReservationConflict> currentConflicts = await ReservationConflictQuery.FindAsync(
+                context, roomIds, start, end);
+
+            if (submittedVersion != conflictVersion)
+            {
+                return;
+            }
+
+            if (currentConflicts.Count > 0 && (!confirmed || !conflicts.SequenceEqual(currentConflicts)))
+            {
+                conflicts = currentConflicts;
+                return;
+            }
+
+            MaintenanceWindow? mw = await context.MaintenanceWindows
+                .Include(window => window.AffectedRooms)
+                .FirstOrDefaultAsync(window => window.MaintenanceWindowId == MaintenanceWindowId);
+
+            if (mw is null)
+            {
+                NavigationManager.NotFound();
+                return;
+            }
+
+            List<Room> rooms = await context.Rooms.Where(room => roomIds.Contains(room.RoomId)).ToListAsync();
+            if (submittedVersion != conflictVersion)
+            {
+                return;
+            }
+            if (rooms.Count != roomIds.Count)
+            {
+                validationMessages.Add(
+                    new FieldIdentifier(MaintenanceWindow, nameof(MaintenanceWindow.AffectedRooms)),
+                    "A kiválasztott termek megváltoztak. Frissítse az oldalt.");
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+
+            if (confirmed && !await ReservationConflictQuery.DeleteAsync(context, currentConflicts))
+            {
+                validationMessages.Add(
+                    new FieldIdentifier(MaintenanceWindow, nameof(MaintenanceWindow.AffectedRooms)),
+                    "Az ütköző foglalások nem törölhetők, mert más adatok kapcsolódnak hozzájuk. A karbantartás nem lett mentve.");
+                editContext.NotifyValidationStateChanged();
+                return;
+            }
+            if (submittedVersion != conflictVersion)
+            {
+                return;
+            }
+
+            mw.StartTime = start;
+            mw.EndTime = end;
+            mw.AffectedRooms.Clear();
+            mw.AffectedRooms.AddRange(rooms);
             await context.SaveChangesAsync();
+            if (submittedVersion != conflictVersion)
+            {
+                return;
+            }
+            await transaction.CommitAsync();
+            NavigationManager.NavigateTo("/maintenancewindows");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -211,7 +312,10 @@
             }
         }
 
-        NavigationManager.NavigateTo("/maintenancewindows");
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private bool MaintenanceWindowExists(Guid maintenancewindowid)

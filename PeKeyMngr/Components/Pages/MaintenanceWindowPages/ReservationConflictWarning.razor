@@ -1,0 +1,40 @@
+@if (Conflicts.Count > 0)
+{
+    <div class="alert alert-warning mt-3" role="alert">
+        <p class="fw-semibold">A karbantartás az alábbi foglalásokkal ütközik:</p>
+        <ul>
+            @foreach (ReservationConflict conflict in Conflicts)
+            {
+                <li>
+                    <strong>@conflict.RoomName</strong>:
+                    @conflict.StartTime.ToString("yyyy.MM.dd. HH:mm") –
+                    @conflict.EndTime.ToString("yyyy.MM.dd. HH:mm") –
+                    @conflict.Requester
+                </li>
+            }
+        </ul>
+        <p>A megerősítéssel az érintett foglalások véglegesen törlésre kerülnek!</p>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-danger" disabled="@IsSaving" @onclick="OnConfirm">
+                Ütköző foglalások törlése és karbantartás mentése
+            </button>
+            <button type="button" class="btn btn-outline-secondary" disabled="@IsSaving" @onclick="OnAdjust">
+                Időpontok vagy termek módosítása
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ReservationConflict> Conflicts { get; set; } = [];
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnAdjust { get; set; }
+}
